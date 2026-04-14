@@ -1,164 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Alaska Wild Lights ? Weekly Reviews Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', sans-serif; background: #0a0e1a; color: #e8eaf6; min-height: 100vh; }
-    header { background: linear-gradient(135deg, #1a237e, #0d47a1); padding: 24px 32px; }
-    header h1 { font-size: 1.8rem; color: #fff; }
-    header p  { color: #90caf9; margin-top: 4px; }
-    .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 28px; }
-    .stat-card { background: #1e2a45; border-radius: 10px; padding: 18px; text-align: center; }
-    .stat-card .val { font-size: 2rem; font-weight: 700; color: #64b5f6; }
-    .stat-card .lbl { font-size: 0.78rem; color: #90a4ae; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
-    .section { background: #1e2a45; border-radius: 10px; padding: 20px; margin-bottom: 24px; }
-    .section h2 { font-size: 1.1rem; color: #90caf9; margin-bottom: 16px; border-bottom: 1px solid #2a3a5c; padding-bottom: 8px; }
-    table { width: 100%; border-collapse: collapse; }
-    th { text-align: left; padding: 10px 12px; background: #162035; color: #90caf9; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .5px; }
-    td { padding: 10px 12px; border-bottom: 1px solid #1a2540; }
-    tr.row-zero td { opacity: 0.4; }
-    tr:last-child td { border-bottom: none; }
-    .flagged-review { background: #1a1a2e; border-left: 3px solid #ef5350; border-radius: 6px; padding: 12px; margin-bottom: 12px; }
-    .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; margin-right: 8px; }
-    .badge-gmaps { background: #1565c0; }
-    .badge-tripadvisor { background: #2e7d32; }
-    .stars { color: #ffd54f; margin-right: 8px; }
-    .flagged-review p { margin-top: 6px; font-size: 0.88rem; color: #b0bec5; }
-    .running-avg { font-size: 1.4rem; font-weight: 700; color: #a5d6a7; }
-    canvas { max-height: 280px; }
-    footer { text-align: center; padding: 24px; color: #546e7a; font-size: 0.8rem; }
-  </style>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alaska Wild Lights — Weekly Reviews Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Segoe UI", system-ui, sans-serif; background: #0a0e1a; color: #e8eaf6; min-height: 100vh; }
+header { background: linear-gradient(135deg, #1a237e, #0d47a1); padding: 24px 32px; }
+header h1 { font-size: 1.8rem; color: #fff; }
+header p  { color: #90caf9; margin-top: 4px; }
+.container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 28px; }
+.stat-card { background: #1e2a45; border-radius: 10px; padding: 18px; text-align: center; }
+.stat-card .val { font-size: 2rem; font-weight: 700; color: #64b5f6; }
+.stat-card .lbl { font-size: 0.78rem; color: #90a4ae; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
+.section { background: #1e2a45; border-radius: 10px; padding: 20px; margin-bottom: 24px; }
+.section h2 { font-size: 1.1rem; color: #90caf9; margin-bottom: 16px; border-bottom: 1px solid #2a3a5c; padding-bottom: 8px; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 10px 12px; background: #162035; color: #90caf9; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .5px; }
+td { padding: 10px 12px; border-bottom: 1px solid #1a2540; }
+tr.row-zero td { opacity: 0.4; }
+tr:last-child td { border-bottom: none; }
+.flagged-review { background: #1a1a2e; border-left: 3px solid #ef5350; border-radius: 6px; padding: 12px; margin-bottom: 12px; }
+.badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; margin-right: 8px; color: #fff; }
+.badge-gmaps { background: #1565c0; }
+.badge-tripadvisor { background: #2e7d32; }
+.stars { color: #ffd54f; margin-right: 8px; }
+.flagged-review p { margin-top: 6px; font-size: 0.88rem; color: #b0bec5; }
+.running-avg { font-size: 1.4rem; font-weight: 700; color: #a5d6a7; }
+canvas { max-height: 280px; }
+footer { text-align: center; padding: 24px; color: #546e7a; font-size: 0.8rem; }
+</style>
 </head>
 <body>
-  <header>
-    <h1>? Alaska Wild Lights ? Reviews Dashboard</h1>
-    <p>Week of Apr 5 ? Apr 11, 2026 &nbsp;|&nbsp; Auto-updated every Sunday evening</p>
-  </header>
-  <div class="container">
-    <div class="stats-grid">
-      <div class="stat-card"><div class="val">0</div><div class="lbl">Total Reviews</div></div>
-      <div class="stat-card"><div class="val">N/A?</div><div class="lbl">Google Maps Avg</div></div>
-      <div class="stat-card"><div class="val">N/A?</div><div class="lbl">TripAdvisor Avg</div></div>
-      <div class="stat-card"><div class="val">N/A?</div><div class="lbl">Combined Avg</div></div>
-      <div class="stat-card"><div class="val">$0</div><div class="lbl">Total Bonuses</div></div>
-      <div class="stat-card"><div class="running-avg">0.00?</div><div class="lbl">All-Time Avg (0 reviews)</div></div>
-    </div>
-
-    <div class="section">
-      <h2>Guide Performance ? Week of Apr 5 ? Apr 11, 2026</h2>
-      <table>
-        <thead><tr>
-          <th>Guide</th><th>Google Maps</th><th>TripAdvisor</th><th>Total</th><th>Bonus</th>
-        </tr></thead>
-        <tbody><tr class="row-zero">
-      <td>Jessica Verrault</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>$0</td>
-    </tr><tr class="row-zero">
-      <td>Shannon Williams</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>$0</td>
-    </tr><tr class="row-zero">
-      <td>Dylan Berggren</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>$0</td>
-    </tr><tr class="row-zero">
-      <td>Ryan Stebbins</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>$0</td>
-    </tr><tr class="row-zero">
-      <td>Ripley Caldwell</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>$0</td>
-    </tr><tr class="row-zero">
-      <td>Raizul Hussain</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>$0</td>
-    </tr><tr class="row-zero">
-      <td>James Kiel N. Jones</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>$0</td>
-    </tr><tr class="row-zero">
-      <td>Tyler Trainor</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>$0</td>
-    </tr><tr class="row-zero">
-      <td>Greg McDaniel</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>$0</td>
-    </tr><tr class="row-zero">
-      <td>Jodi Bailey</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>$0</td>
-    </tr><tr class="row-zero">
-      <td>Gina Sliger</td>
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
-      <td>$0</td>
-    </tr></tbody>
-      </table>
-    </div>
-
-    <div class="section">
-      <h2>Bonus Chart</h2>
-      <canvas id="bonusChart"></canvas>
-    </div>
-
-    <div class="section">
-      <h2>?? Low-Rating Reviews (1?2 Stars)</h2>
-      <p style="color:#90a4ae">None this week.</p>
-    </div>
-  </div>
-  <footer>Alaska Wild Lights Reviews Dashboard ? Auto-updated every Sunday at 8pm Alaska Time</footer>
-  <script>
-    const ctx = document.getElementById('bonusChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: ["Jessica Verrault","Shannon Williams","Dylan Berggren","Ryan Stebbins","Ripley Caldwell","Raizul Hussain","James Kiel N. Jones","Tyler Trainor","Greg McDaniel","Jodi Bailey","Gina Sliger"],
-        datasets: [{
-          label: 'Bonus ($)',
-          data: [0,0,0,0,0,0,0,0,0,0,0],
-          backgroundColor: 'rgba(100, 181, 246, 0.7)',
-          borderColor: '#64b5f6',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { beginAtZero: true, ticks: { color: '#90a4ae' }, grid: { color: '#1e2a45' } },
-          x: { ticks: { color: '#90a4ae' }, grid: { display: false } }
-        }
-      }
-    });
-  </script>
+<header>
+<h1>🌌 Alaska Wild Lights — Reviews Dashboard</h1>
+<p>Week of Apr 4 – Apr 11, 2026 &nbsp;|&nbsp; Auto-updated every Sunday evening</p>
+</header>
+<div class="container">
+<div class="stats-grid">
+<div class="stat-card"><div class="val">0</div><div class="lbl">Total Reviews</div></div>
+<div class="stat-card"><div class="val">N/A★</div><div class="lbl">Google Maps Avg</div></div>
+<div class="stat-card"><div class="val">N/A★</div><div class="lbl">TripAdvisor Avg</div></div>
+<div class="stat-card"><div class="val">N/A★</div><div class="lbl">Combined Avg</div></div>
+<div class="stat-card"><div class="val">$0</div><div class="lbl">Total Bonuses</div></div>
+<div class="stat-card"><div class="running-avg">0.00★</div><div class="lbl">All-Time Avg (0 reviews)</div></div>
+</div>
+<div class="section">
+<h2>📊 Guide Performance — Week of Apr 4 – Apr 11, 2026</h2>
+<table><thead><tr><th>Guide</th><th>Google Maps</th><th>TripAdvisor</th><th>Total</th><th>⭐ 5-Star</th><th>Bonus</th></tr></thead>
+<tbody><tr class="row-zero"><td>Jessica Verrault</td><td>0</td><td>0</td><td>0</td><td>0</td><td>$0</td></tr>
+<tr class="row-zero"><td>Shannon Williams</td><td>0</td><td>0</td><td>0</td><td>0</td><td>$0</td></tr>
+<tr class="row-zero"><td>Dylan Berggren</td><td>0</td><td>0</td><td>0</td><td>0</td><td>$0</td></tr>
+<tr class="row-zero"><td>Ryan Stebbins</td><td>0</td><td>0</td><td>0</td><td>0</td><td>$0</td></tr>
+<tr class="row-zero"><td>Ripley Caldwell</td><td>0</td><td>0</td><td>0</td><td>0</td><td>$0</td></tr>
+<tr class="row-zero"><td>Raizul Hussain</td><td>0</td><td>0</td><td>0</td><td>0</td><td>$0</td></tr>
+<tr class="row-zero"><td>James Kiel N. Jones</td><td>0</td><td>0</td><td>0</td><td>0</td><td>$0</td></tr>
+<tr class="row-zero"><td>Tyler Trainor</td><td>0</td><td>0</td><td>0</td><td>0</td><td>$0</td></tr>
+<tr class="row-zero"><td>Greg McDaniel</td><td>0</td><td>0</td><td>0</td><td>0</td><td>$0</td></tr>
+<tr class="row-zero"><td>Jodi Bailey</td><td>0</td><td>0</td><td>0</td><td>0</td><td>$0</td></tr>
+<tr class="row-zero"><td>Gina Sliger</td><td>0</td><td>0</td><td>0</td><td>0</td><td>$0</td></tr></tbody></table>
+</div>
+<div class="section">
+<h2>💰 Bonus Chart</h2>
+<canvas id="bonusChart"></canvas>
+</div>
+<div class="section">
+<h2>⚠️ Low-Rating Reviews (1–2 Stars)</h2>
+<p style="color:#90a4ae">No hay reviews de 1-2 estrellas esta semana.</p>
+</div>
+</div>
+<footer>Alaska Wild Lights Reviews Dashboard · Auto-updated every Sunday at 8pm Alaska Time</footer>
+<script>
+var ctx = document.getElementById("bonusChart").getContext("2d");
+new Chart(ctx, {
+  type: "bar",
+  data: {
+    labels: ["Jessica Verrault","Shannon Williams","Dylan Berggren","Ryan Stebbins","Ripley Caldwell","Raizul Hussain","James Kiel N. Jones","Tyler Trainor","Greg McDaniel","Jodi Bailey","Gina Sliger"],
+    datasets: [{ label: "Bonus ($)", data: [0,0,0,0,0,0,0,0,0,0,0],
+      backgroundColor: "rgba(100,181,246,0.7)", borderColor: "#64b5f6", borderWidth: 1 }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, ticks: { color: "#90a4ae" }, grid: { color: "#1e2a45" } },
+      x: { ticks: { color: "#90a4ae" }, grid: { display: false } }
+    }
+  }
+});
+</script>
 </body>
 </html>
