@@ -1,0 +1,28 @@
+{
+  "weekLabel": "May 3 – May 9, 2026",
+  "timestamp": "2026-05-11T15:11:36.289Z",
+  "summary": {
+    "totalReviews": 6,
+    "gmapsCount": 2,
+    "gmapsAvg": "5.0",
+    "taCount": 4,
+    "taAvg": "4.0",
+    "combinedAvg": "4.3",
+    "totalBonus": 0
+  },
+  "guides": [],
+  "allTime": {
+    "totalReviews": 19,
+    "averageRating": "4.47"
+  },
+  "lowRatings": [
+    {
+      "guide": "UNASSIGNED",
+      "platform": "tripadvisor",
+      "rating": 1,
+      "text": "最糟糕的體驗，餐廳有種族歧視，非美國人的組合都被超收稅，跟餐廳理論後才改20%，但美國人15%，壓縮了最重要的溫泉的時間",
+      "url": "https://www.tripadvisor.com/ShowUserReviews-g60826-d11479767-r1059695274-Northern_Lights_Chena_Hot_Springs_Tour-Fairbanks_Alaska.html",
+      "date": "2026-05-10"
+    }
+  ]
+}
