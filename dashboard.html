@@ -1,1 +1,436 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Alaska Wild Lights — Reviews Dashboard</title><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",system-ui,sans-serif;background:#0a0e1a;color:#e8eaf6;min-height:100vh}header{background:linear-gradient(135deg,#1a237e,#0d47a1);padding:24px 32px}header h1{font-size:1.8rem;color:#fff}header p{color:#90caf9;margin-top:4px}.w{max-width:1100px;margin:0 auto;padding:24px 16px}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px}.c{background:#1e2a45;border-radius:10px;padding:18px;text-align:center}.c .v{font-size:2rem;font-weight:700;color:#64b5f6}.c .l{font-size:.78rem;color:#90a4ae;margin-top:4px;text-transform:uppercase;letter-spacing:.5px}.s{background:#1e2a45;border-radius:10px;padding:20px;margin-bottom:24px}.s h2{font-size:1.05rem;color:#90caf9;margin-bottom:14px;border-bottom:1px solid #2a3a5c;padding-bottom:8px}table{width:100%;border-collapse:collapse}th{text-align:left;padding:10px 12px;background:#162035;color:#90caf9;font-size:.78rem;text-transform:uppercase;letter-spacing:.5px}td{padding:10px 12px;border-bottom:1px solid #1a2540}tr.rz td{opacity:.4}tr:last-child td{border-bottom:none}.fl{background:#1a1a2e;border-left:3px solid #ef5350;border-radius:6px;padding:12px;margin-bottom:12px}.b{font-size:.7rem;padding:2px 8px;border-radius:20px;margin-right:8px;color:#fff}.bg{background:#1565c0}.bt{background:#2e7d32}.st{color:#ffd54f;margin-right:8px}.fl p{margin-top:6px;font-size:.88rem;color:#b0bec5}.at{font-size:1.4rem;font-weight:700;color:#a5d6a7}canvas{max-height:280px}footer{text-align:center;padding:24px;color:#546e7a;font-size:.8rem}</style></head><body><header><h1>🌌 Alaska Wild Lights — Reviews Dashboard</h1><p>Week of Apr 26 – May 2, 2026  |  Auto-updated</p></header><div class="w"><div class="g"><div class="c"><div class="v">0</div><div class="l">Total Reviews</div></div><div class="c"><div class="v">N/A★</div><div class="l">Google Maps Avg</div></div><div class="c"><div class="v">N/A★</div><div class="l">TripAdvisor Avg</div></div><div class="c"><div class="v">N/A★</div><div class="l">Combined Avg</div></div><div class="c"><div class="v">$0</div><div class="l">Total Bonuses</div></div><div class="c"><div class="at">4.25★</div><div class="l">All-Time Avg (8 reviews)</div></div></div><div class="s"><h2>📊 Guide Performance — Week of Apr 26 – May 2, 2026</h2><table><thead><tr><th>Guide</th><th>Google Maps</th><th>TripAdvisor</th><th>Total</th><th>⭐ 5-Star</th><th>Bonus</th></tr></thead><tbody></tbody></table></div><div class="s"><h2>💰 Bonus Chart</h2><canvas id="bc"></canvas></div><div class="s"><h2>⚠️ Low-Rating Reviews (1–2 Stars)</h2><p style="color:#90a4ae">No 1-2 star reviews this week.</p></div></div><footer>Alaska Wild Lights Reviews Dashboard</footer><script>new Chart(document.getElementById("bc").getContext("2d"),{type:"bar",data:{labels:[],datasets:[{label:"Bonus ($)",data:[],backgroundColor:"rgba(100,181,246,.7)",borderColor:"#64b5f6",borderWidth:1}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{color:"#90a4ae"},grid:{color:"#1e2a45"}},x:{ticks:{color:"#90a4ae"},grid:{display:false}}}}});</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Alaska Wild Lights — Reviews Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #0a0e1a;
+      color: #e8eaf6;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1a237e, #0d47a1);
+      padding: 24px 32px;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      color: #fff;
+    }
+
+    header p {
+      color: #90caf9;
+      margin-top: 4px;
+    }
+
+    .w {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+
+    .g {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .c {
+      background: #1e2a45;
+      border-radius: 10px;
+      padding: 18px;
+      text-align: center;
+    }
+
+    .c .v {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #64b5f6;
+    }
+
+    .c .l {
+      font-size: 0.78rem;
+      color: #90a4ae;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .s {
+      background: #1e2a45;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .s h2 {
+      font-size: 1.05rem;
+      color: #90caf9;
+      margin-bottom: 14px;
+      border-bottom: 1px solid #2a3a5c;
+      padding-bottom: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      background: #162035;
+      color: #90caf9;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1a2540;
+    }
+
+    tr.rz td {
+      opacity: 0.4;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .fl {
+      background: #1a1a2e;
+      border-left: 3px solid #ef5350;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .b {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-right: 8px;
+      color: #fff;
+    }
+
+    .bg {
+      background: #1565c0;
+    }
+
+    .bt {
+      background: #2e7d32;
+    }
+
+    .st {
+      color: #ffd54f;
+      margin-right: 8px;
+    }
+
+    .fl p {
+      margin-top: 6px;
+      font-size: 0.88rem;
+      color: #b0bec5;
+    }
+
+    .at {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #a5d6a7;
+    }
+
+    canvas {
+      max-height: 280px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: #546e7a;
+      font-size: 0.8rem;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+      color: #90a4ae;
+    }
+
+    .error {
+      background: #1a1a2e;
+      border-left: 3px solid #ef5350;
+      border-radius: 6px;
+      padding: 16px;
+      margin: 20px;
+      color: #ef5350;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🌌 Alaska Wild Lights — Reviews Dashboard</h1>
+    <p id="header-subtitle">Loading data...</p>
+  </header>
+
+  <div class="w">
+    <div class="g" id="metrics-grid">
+      <div class="loading">Loading metrics...</div>
+    </div>
+
+    <div class="s">
+      <h2>📊 Guide Performance</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Guide</th>
+            <th>Google Maps</th>
+            <th>TripAdvisor</th>
+            <th>Total</th>
+            <th>⭐ 5-Star</th>
+            <th>Bonus</th>
+          </tr>
+        </thead>
+        <tbody id="guide-table-body">
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 40px;">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="s">
+      <h2>💰 Bonus Chart</h2>
+      <canvas id="bc"></canvas>
+    </div>
+
+    <div class="s">
+      <h2>⚠️ Low-Rating Reviews (1–2 Stars)</h2>
+      <div id="low-ratings-container">
+        <p style="color: #90a4ae">Loading...</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>Alaska Wild Lights Reviews Dashboard</footer>
+
+  <script>
+    // GitHub raw content URL for data.json
+    const DATA_URL = 'https://raw.githubusercontent.com/AlaskaWildlights/akwl-reviews/main/data.json';
+
+    let chartInstance = null;
+
+    async function loadDashboard() {
+      try {
+        const response = await fetch(DATA_URL);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: Could not load data`);
+        }
+
+        const data = await response.json();
+        renderDashboard(data);
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+        showError(`Failed to load dashboard data: ${error.message}`);
+      }
+    }
+
+    function renderDashboard(data) {
+      // Update header
+      document.getElementById('header-subtitle').textContent = `Week of ${data.weekLabel} | Auto-updated`;
+
+      // Render metrics grid
+      renderMetrics(data);
+
+      // Render guide table
+      renderGuideTable(data);
+
+      // Render bonus chart
+      renderBonusChart(data);
+
+      // Render low ratings
+      renderLowRatings(data);
+    }
+
+    function renderMetrics(data) {
+      const { summary, allTime } = data;
+
+      const metrics = [
+        { value: summary.totalReviews, label: 'Total Reviews' },
+        { value: summary.gmapsAvg + '★', label: 'Google Maps Avg' },
+        { value: summary.taAvg + '★', label: 'TripAdvisor Avg' },
+        { value: summary.combinedAvg + '★', label: 'Combined Avg' },
+        { value: '$' + summary.totalBonus, label: 'Total Bonuses' },
+        { value: allTime.averageRating + '★', label: `All-Time Avg (${allTime.totalReviews} reviews)`, special: true }
+      ];
+
+      const html = metrics.map((m) => {
+        const cls = m.special ? ' style="grid-column: 1 / -1;"' : '';
+        return `
+          <div class="c"${cls}>
+            <div class="${m.special ? 'at' : 'v'}">${escapeHtml(m.value)}</div>
+            <div class="l">${escapeHtml(m.label)}</div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('metrics-grid').innerHTML = html;
+    }
+
+    function renderGuideTable(data) {
+      const { guides } = data;
+
+      if (!guides || guides.length === 0) {
+        document.getElementById('guide-table-body').innerHTML =
+          '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #90a4ae;">No guide data available</td></tr>';
+        return;
+      }
+
+      const html = guides.map((guide) => {
+        const cls = guide.bonus === 0 ? ' class="rz"' : '';
+        return `
+          <tr${cls}>
+            <td>${escapeHtml(guide.name)}</td>
+            <td>${guide.gmaps}</td>
+            <td>${guide.ta}</td>
+            <td>${guide.gmaps + guide.ta}</td>
+            <td>${guide.fiveStar}</td>
+            <td>$${guide.bonus}</td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('guide-table-body').innerHTML = html;
+    }
+
+    function renderBonusChart(data) {
+      const { guides } = data;
+
+      if (!guides || guides.length === 0) {
+        return;
+      }
+
+      const labels = guides.map((g) => g.name);
+      const bonusData = guides.map((g) => g.bonus);
+
+      const ctx = document.getElementById('bc').getContext('2d');
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Bonus ($)',
+              data: bonusData,
+              backgroundColor: 'rgba(100, 181, 246, 0.7)',
+              borderColor: '#64b5f6',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: '#90a4ae'
+              },
+              grid: {
+                color: '#1e2a45'
+              }
+            },
+            x: {
+              ticks: {
+                color: '#90a4ae'
+              },
+              grid: {
+                display: false
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderLowRatings(data) {
+      const { lowRatings } = data;
+      const container = document.getElementById('low-ratings-container');
+
+      if (!lowRatings || lowRatings.length === 0) {
+        container.innerHTML = '<p style="color: #90a4ae">No 1–2 star reviews this week.</p>';
+        return;
+      }
+
+      const html = lowRatings.map((r) => {
+        const isMaps = r.platform === 'gmaps';
+        const badgeClass = isMaps ? 'bg' : 'bt';
+        const platformLabel = isMaps ? 'Google' : 'TripAdvisor';
+
+        let stars = '';
+        for (let i = 0; i < 5; i++) {
+          stars += i < r.rating ? '★' : '☆';
+        }
+
+        return `
+          <div class="fl">
+            <span class="b ${badgeClass}">${escapeHtml(platformLabel)}</span>
+            <span class="st">${stars}</span>
+            <strong>${escapeHtml(r.guide)}</strong>
+            <p>${escapeHtml(r.text || '(no text)')}</p>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = html;
+    }
+
+    function showError(message) {
+      const content = document.querySelector('.w');
+      const errorHtml = `<div class="error">${escapeHtml(message)}</div>`;
+      content.insertAdjacentHTML('afterbegin', errorHtml);
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.toString().replace(/[&<>"']/g, (m) => map[m]);
+    }
+
+    // Load dashboard on page load
+    document.addEventListener('DOMContentLoaded', loadDashboard);
+
+    // Optional: Auto-refresh every 5 minutes
+    setInterval(loadDashboard, 5 * 60 * 1000);
+  </script>
+</body>
+</html>
