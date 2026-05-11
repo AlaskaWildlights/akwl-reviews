@@ -1,6 +1,6 @@
 {
   "weekLabel": "May 3 – May 9, 2026",
-  "timestamp": "2026-05-11T15:39:05.085Z",
+  "timestamp": "2026-05-11T18:27:31.673Z",
   "summary": {
     "totalReviews": 6,
     "gmapsCount": 2,
@@ -8,12 +8,126 @@
     "taCount": 4,
     "taAvg": "4.0",
     "combinedAvg": "4.3",
-    "totalBonus": 0
+    "totalBonus": 30,
+    "totalFiveStarReviews": 5
   },
-  "guides": [],
+  "guides": [
+    {
+      "name": "Shannon Williams",
+      "gmaps": 1,
+      "ta": 1,
+      "fiveStar": 2,
+      "bonus": 15
+    },
+    {
+      "name": "Dylan Berggren",
+      "gmaps": 1,
+      "ta": 1,
+      "fiveStar": 2,
+      "bonus": 15
+    },
+    {
+      "name": "Jessica Verrault",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
+      "name": "Ryan Stebbins",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
+      "name": "Jodi Bailey",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
+      "name": "Tyler Trainor",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
+      "name": "RIpley Caldwell",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
+      "name": "Milo Pranther",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
+      "name": "Rich Cohen",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
+      "name": "John Kane",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
+      "name": "Sierra Baker",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
+      "name": "Wesley Campbell",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
+      "name": "Sullivan Bogardus",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
+      "name": "Pepper Burrel",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
+      "name": "Greg McDaniel",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
+      "name": "Gina Sliger",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    }
+  ],
   "allTime": {
-    "totalReviews": 25,
-    "averageRating": "4.44"
+    "totalReviews": 31,
+    "averageRating": "4.42"
   },
   "lowRatings": [
     {
