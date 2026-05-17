@@ -1,13 +1,13 @@
 {
   "weekLabel": "May 10 – May 16, 2026",
-  "timestamp": "2026-05-11T19:33:53.918Z",
+  "timestamp": "2026-05-17T12:59:19.919Z",
   "summary": {
-    "totalReviews": 0,
-    "gmapsCount": 0,
-    "gmapsAvg": "N/A",
-    "taCount": 0,
-    "taAvg": "N/A",
-    "combinedAvg": "N/A",
+    "totalReviews": 2,
+    "gmapsCount": 1,
+    "gmapsAvg": "5.0",
+    "taCount": 1,
+    "taAvg": "1.0",
+    "combinedAvg": "3.0",
     "totalBonus": 0
   },
   "guides": [
@@ -126,16 +126,16 @@
   ],
   "allTime": {
     "googleMaps": {
-      "count": 50,
-      "avg": "4.68"
+      "count": 51,
+      "avg": "4.69"
     },
     "tripAdvisor": {
-      "count": 50,
-      "avg": "4.42"
+      "count": 51,
+      "avg": "4.35"
     },
     "combined": {
-      "count": 100,
-      "avg": "4.55"
+      "count": 102,
+      "avg": "4.52"
     }
   }
 }
