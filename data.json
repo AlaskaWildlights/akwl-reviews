@@ -1,16 +1,30 @@
 {
   "weekLabel": "May 10 – May 16, 2026",
-  "timestamp": "2026-05-18T16:01:22.183Z",
+  "timestamp": "2026-05-18T16:13:59.731Z",
   "summary": {
-    "totalReviews": 0,
-    "gmapsCount": 0,
-    "gmapsAvg": "N/A",
-    "taCount": 0,
-    "taAvg": "N/A",
-    "combinedAvg": "N/A",
-    "totalBonus": 0
+    "totalReviews": 2,
+    "gmapsCount": 1,
+    "gmapsAvg": "5.0",
+    "taCount": 1,
+    "taAvg": "1.0",
+    "combinedAvg": "3.0",
+    "totalBonus": 20
   },
   "guides": [
+    {
+      "name": "Jodi Bailey",
+      "gmaps": 1,
+      "ta": 0,
+      "fiveStar": 1,
+      "bonus": 10
+    },
+    {
+      "name": "RIpley Caldwell",
+      "gmaps": 1,
+      "ta": 0,
+      "fiveStar": 1,
+      "bonus": 10
+    },
     {
       "name": "Jessica Verrault",
       "gmaps": 0,
@@ -40,21 +54,7 @@
       "bonus": 0
     },
     {
-      "name": "Jodi Bailey",
-      "gmaps": 0,
-      "ta": 0,
-      "fiveStar": 0,
-      "bonus": 0
-    },
-    {
       "name": "Tyler Trainor",
-      "gmaps": 0,
-      "ta": 0,
-      "fiveStar": 0,
-      "bonus": 0
-    },
-    {
-      "name": "RIpley Caldwell",
       "gmaps": 0,
       "ta": 0,
       "fiveStar": 0,
@@ -122,6 +122,14 @@
       "ta": 0,
       "fiveStar": 0,
       "bonus": 0
+    }
+  ],
+  "lowRatings": [
+    {
+      "guide": "UNASSIGNED",
+      "rating": 1,
+      "platform": "tripadvisor",
+      "text": "It was horrible and tragedy full experience. \nDriver saved tea / coffee / water bottle and snakes what ch were supposed to be served to us. There was NO facility of these things on the way of 200 miles (Appx).. \nThe van was totally third class and outdated. Each and every part of the body of the van was shouting and noising. The interior was totally miser and even safety handles were also not fixed. The space between rows and seats were most uncomfortable. All 8 passengers were Senior Citizens and experienced great physical difficulties. \nThis trip was NOT a pleasant tour but a terrible long ride. \n\nI think I will never recommend to anyone.\n\nSorry."
     }
   ],
   "allTime": {
