@@ -330,9 +330,9 @@ function runWeeklyReport() {
     Logger.log('   ✓ data.json pushed');
     Logger.log('');
 
-    Logger.log('📧 Sending email (HTML + plain-text fallback)...');
+    Logger.log('📧 Creating team draft + sending preview to ALERT_EMAIL...');
     createEmailDraftHTML(metrics, running, win.weekLabel, C);
-    Logger.log('   ✓ Email sent');
+    Logger.log('   ✓ Draft created + preview sent');
     Logger.log('');
 
     // -------- Everything above succeeded. Persist state LAST so a partial
@@ -892,8 +892,17 @@ function createEmailDraftHTML(metrics, runningState, weekLabel, C) {
     'This email requires an HTML-capable email client.\n\n' +
     'View dashboard: ' + dashUrl;
 
-  GmailApp.sendEmail(C.EMAIL_TO, subject, plainFallback, {
+  // Main team email: create a DRAFT (not sent) so it can be reviewed/edited
+  // before manually sending to the team.
+  GmailApp.createDraft(C.EMAIL_TO, subject, plainFallback, {
     cc: C.EMAIL_CC,
+    htmlBody: html,
+    name: 'Alaska Wild Lights Reviews'
+  });
+
+  // Preview copy: send the rendered HTML ONLY to ALERT_EMAIL (awlsaray@) so
+  // the format can be verified each week without spamming the team.
+  GmailApp.sendEmail(C.ALERT_EMAIL, '[PREVIEW] ' + subject, plainFallback, {
     htmlBody: html,
     name: 'Alaska Wild Lights Reviews'
   });
