@@ -600,7 +600,7 @@ function calculateMetrics(matched, guides, gmapsWeek, taWeek) {
       lowRating.push({
         guide: assignedGuides.join(', '),
         rating: rating,
-        platform: platform,
+        platform: r._platform,
         text: r.text||r.reviewText||''
       });
     }
@@ -740,6 +740,14 @@ function generateJSONData(metrics, runningState, weekLabel, C) {
       totalBonus: metrics.totalBonus
     },
     guides: metrics.guideStats.filter(function(g) { return g.name !== 'UNASSIGNED'; }),
+    lowRatings: metrics.lowRating.map(function(r) {
+      return {
+        guide: r.guide,
+        rating: r.rating,
+        platform: r.platform,
+        text: r.text
+      };
+    }),
     // FIX 3: Added averageRating/totalReviews aliases so dashboard.html
     // (which reads allTime.averageRating and allTime.totalReviews) renders.
     allTime: {
