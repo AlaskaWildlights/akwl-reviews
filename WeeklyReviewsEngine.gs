@@ -290,17 +290,9 @@ function runWeeklyReport() {
     Logger.log('   TripAdvisor in range: ' + taWeek.length);
     Logger.log('');
 
-    // -------- Dedup against reviews seen in any previous run. --------
-    Logger.log('🧹 DEDUP against SEEN_REVIEW_IDS:');
-    var seenSet = {};
-    getSeenReviewKeys().forEach(function(k){ seenSet[k] = true; });
-    var gmBefore = gmapsWeek.length, taBefore = taWeek.length;
-    gmapsWeek = dedupReviews(gmapsWeek, seenSet);
-    taWeek    = dedupReviews(taWeek,    seenSet);
-    Logger.log('   Google Maps fresh: ' + gmapsWeek.length + '/' + gmBefore);
-    Logger.log('   TripAdvisor fresh: ' + taWeek.length + '/' + taBefore);
-    Logger.log('');
-
+    // The weekly report shows ALL reviews in the date range — even those that
+    // were captured by bootstrap or a previous run. Dedup applies ONLY to the
+    // cumulative all-time running state below, to avoid double-counting totals.
     Logger.log('🎯 MATCHING REVIEWS TO GUIDES:');
     var allReviews = gmapsWeek.concat(taWeek);
     var matched = matchReviewsToGuides(allReviews, guides);
@@ -308,9 +300,23 @@ function runWeeklyReport() {
     Logger.log('');
 
     var metrics = calculateMetrics(matched, guides, gmapsWeek, taWeek);
+
+    // -------- Dedup ONLY for the all-time running state (not the weekly
+    //          report). Reviews that already contributed to the bootstrap or a
+    //          previous run must NOT be counted again in totals. --------
+    Logger.log('🧹 DEDUP against SEEN_REVIEW_IDS (running state only):');
+    var seenSet = {};
+    getSeenReviewKeys().forEach(function(k){ seenSet[k] = true; });
+    var gmBefore = gmapsWeek.length, taBefore = taWeek.length;
+    var gmapsFresh = dedupReviews(gmapsWeek, seenSet);
+    var taFresh    = dedupReviews(taWeek,    seenSet);
+    Logger.log('   Google Maps fresh: ' + gmapsFresh.length + '/' + gmBefore);
+    Logger.log('   TripAdvisor fresh: ' + taFresh.length + '/' + taBefore);
+    Logger.log('');
+
     // Compute the cumulative running state but DO NOT persist yet — only after
     // sheets/email/github succeed below.
-    var running = computeRunningState(gmapsWeek, taWeek);
+    var running = computeRunningState(gmapsFresh, taFresh);
 
     Logger.log('📝 Updating sheets...');
     updateWeeklyReviewsTab(C, metrics, guides, win.sundayLabel);
@@ -324,9 +330,9 @@ function runWeeklyReport() {
     Logger.log('   ✓ data.json pushed');
     Logger.log('');
 
-    Logger.log('📧 Creating email (HTML + plain-text fallback)...');
+    Logger.log('📧 Sending email (HTML + plain-text fallback)...');
     createEmailDraftHTML(metrics, running, win.weekLabel, C);
-    Logger.log('   ✓ Email draft created');
+    Logger.log('   ✓ Email sent');
     Logger.log('');
 
     // -------- Everything above succeeded. Persist state LAST so a partial
@@ -886,9 +892,9 @@ function createEmailDraftHTML(metrics, runningState, weekLabel, C) {
     'This email requires an HTML-capable email client.\n\n' +
     'View dashboard: ' + dashUrl;
 
-  GmailApp.createDraft(C.EMAIL_TO, subject, plainFallback, {
+  GmailApp.sendEmail(C.EMAIL_TO, subject, plainFallback, {
     cc: C.EMAIL_CC,
     htmlBody: html,
-    noReply: false
+    name: 'Alaska Wild Lights Reviews'
   });
 }
