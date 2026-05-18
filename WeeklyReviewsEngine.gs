@@ -901,9 +901,30 @@ function createEmailDraftHTML(metrics, runningState, weekLabel, C) {
   });
 
   // Preview copy: send the rendered HTML ONLY to ALERT_EMAIL (awlsaray@) so
-  // the format can be verified each week without spamming the team.
+  // the format can be verified each week without spamming the team. Prepend
+  // a banner reminding NOT to forward this preview — forwarding strips HTML.
+  // Instead, Saray opens Gmail Drafts and clicks Send on the team draft.
+  var previewBanner =
+    '<div style="background:#fff3cd;border:2px solid #ffc107;padding:14px 18px;' +
+    'margin:0 0 18px 0;border-radius:6px;color:#5d4400;font-family:Arial,sans-serif;font-size:13px;line-height:1.5">' +
+    '<strong>⚠️ ESTE ES UN PREVIEW. NO USES "REENVIAR/FORWARD".</strong><br>' +
+    'Gmail rompe el HTML cuando se reenvía. Para enviar al equipo:<br>' +
+    '<strong>1.</strong> Abre Gmail → <strong>Borradores (Drafts)</strong><br>' +
+    '<strong>2.</strong> Abre el draft <em>"' + escapeHtmlGs(subject) + '"</em> (sin el [PREVIEW])<br>' +
+    '<strong>3.</strong> Click <strong>Enviar</strong> — el equipo recibe el HTML intacto.' +
+    '</div>';
+  var htmlForPreview = html.replace('<div class="container">', '<div class="container">' + previewBanner);
   GmailApp.sendEmail(C.ALERT_EMAIL, '[PREVIEW] ' + subject, plainFallback, {
-    htmlBody: html,
+    htmlBody: htmlForPreview,
     name: 'Alaska Wild Lights Reviews'
   });
+}
+
+// Minimal HTML escape for values interpolated into the preview banner.
+function escapeHtmlGs(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
