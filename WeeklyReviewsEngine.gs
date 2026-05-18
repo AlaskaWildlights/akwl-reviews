@@ -5,12 +5,26 @@
 // 2. Debug logging detallado
 // 3. Verificar fecha correcta (hoy 11 = semana 3-9)
 //
-// BUG FIXES (v4.11.1):
-//  FIX 1: Added 'jodi' alias + first-name matching + miss-logging
-//  FIX 2: Plain-text fallback in Gmail draft to avoid empty body
+// v4.11.1 BUG FIXES:
+//  FIX 1: First-name matching + miss-logging
+//  FIX 2: Plain-text fallback in Gmail draft
 //  FIX 3: Added averageRating/totalReviews aliases under allTime
 //  FIX 4: Bootstrap idempotency guard
+//  FIX 5: getWeekWindow daysBack = dow + 7 (works any day of the week)
+//  FIX 6: Multi-guide attribution per review
+//
+// v4.11.2 HARDENING:
+//  - Review-key dedup across runs (SEEN_REVIEW_IDS rolling cache)
+//  - Running state and seen-keys are persisted LAST so partial failures don't
+//    advance the cumulative totals
+//  - try/catch around each Apify platform; failure email to ALERT_EMAIL
+//  - fetchWithRetry: 3 attempts, 2s/4s/8s backoff on Apify + GitHub fetches
+//  - Single TZ constant
+//  - LockService prevents concurrent execution
 // ============================================================
+
+// Single source of truth for timezone. Day boundaries are at 00:00 in this tz.
+var TZ = 'America/Anchorage';
 
 function getConfig() {
   var props = PropertiesService.getScriptProperties();
@@ -25,6 +39,7 @@ function getConfig() {
     GITHUB_FILE:     props.getProperty('GITHUB_FILE')     || 'data.json',
     EMAIL_TO:        props.getProperty('EMAIL_TO')        || 'info@alaskawildlights.com',
     EMAIL_CC:        props.getProperty('EMAIL_CC')        || 'joshuamcneal@alaskawildlights.com,ashley@alaskawildlights.com,kyle@alaskawildlights.com',
+    ALERT_EMAIL:     props.getProperty('ALERT_EMAIL')     || 'awlsaray@gmail.com',
     EMPLOYEE_SHEET_ID: '1lhB25hdKfARc6nGjbN9AwYGHQ_bsLRdGkeCuQA7Ow9w',
     EMPLOYEES_TAB:     'current employees',
     DATA_SHEET_ID:     '1CNmg85Ap4qc_LsHy3_M7rq0YkYleeHJ8cmb66NTgRMU',
@@ -47,6 +62,81 @@ function getGuideAliases() {
 }
 
 // ============================================================
+// HELPERS — retries, alerts, review-key dedup
+// ============================================================
+
+// Retries UrlFetchApp.fetch up to maxAttempts (default 3) with exponential
+// backoff (2s, 4s, 8s). Retries on thrown exceptions and on HTTP 5xx. Returns
+// the HTTPResponse from the final attempt. Throws if all attempts fail.
+function fetchWithRetry(url, options, maxAttempts) {
+  maxAttempts = maxAttempts || 3;
+  var lastErr;
+  for (var i = 0; i < maxAttempts; i++) {
+    try {
+      var resp = UrlFetchApp.fetch(url, options || {});
+      var code = resp.getResponseCode();
+      if (code < 500) return resp;        // 2xx/3xx/4xx are final
+      lastErr = new Error('HTTP ' + code + ' from ' + url);
+    } catch (e) {
+      lastErr = e;
+    }
+    if (i < maxAttempts - 1) Utilities.sleep(Math.pow(2, i + 1) * 1000);
+  }
+  throw lastErr || new Error('fetchWithRetry: all attempts failed for ' + url);
+}
+
+// Sends a failure alert. Swallows any send error so the script can continue.
+function notifyFailure(C, subject, body) {
+  try {
+    MailApp.sendEmail({
+      to: C.ALERT_EMAIL,
+      subject: '[AKWL Reviews] ' + subject,
+      body: body
+    });
+    Logger.log('   ✉  Alert sent to ' + C.ALERT_EMAIL);
+  } catch (e) {
+    Logger.log('   ⚠  Could not send alert email: ' + e.message);
+  }
+}
+
+// Stable per-review key for dedup across runs.
+function reviewKey(r) {
+  var platform = r._platform || 'unk';
+  var id = r.reviewId || r.id || r.reviewerUrl || r.url || '';
+  if (!id) {
+    var date = r.publishedAtDate || r.publishedDate || r.date || r.reviewDate || r.time || '';
+    var snippet = (r.text || r.reviewText || '').substring(0, 50);
+    id = date + ':' + snippet;
+  }
+  return platform + ':' + id;
+}
+
+function getSeenReviewKeys() {
+  var json = PropertiesService.getScriptProperties().getProperty('SEEN_REVIEW_IDS') || '[]';
+  try { return JSON.parse(json); } catch (e) { return []; }
+}
+
+function saveSeenReviewKeys(keysArray) {
+  // Cap at last 1000 keys to stay under the 9 KB per-property limit.
+  var capped = keysArray.slice(-1000);
+  PropertiesService.getScriptProperties().setProperty('SEEN_REVIEW_IDS', JSON.stringify(capped));
+}
+
+// Returns only reviews whose key is not in seenSet. Mutates seenSet to mark
+// newly-seen keys, so callers can pass the same set across multiple platforms.
+function dedupReviews(reviews, seenSet) {
+  var fresh = [];
+  reviews.forEach(function(r) {
+    var k = reviewKey(r);
+    if (!seenSet[k]) {
+      fresh.push(r);
+      seenSet[k] = true;
+    }
+  });
+  return fresh;
+}
+
+// ============================================================
 // BOOTSTRAP FUNCTION (RUN ONCE)
 // ============================================================
 function bootstrap_Initialize6MonthHistory() {
@@ -57,7 +147,7 @@ function bootstrap_Initialize6MonthHistory() {
   Logger.log('');
 
   // FIX 4: Idempotency guard. Re-running this duplicates counts because
-  // updateRunningState_IncrementalAdd sums on top of the stored totals.
+  // computeRunningState sums on top of the persisted bootstrap totals.
   var props = PropertiesService.getScriptProperties();
   if (props.getProperty('BOOTSTRAP_COMPLETED') === 'true') {
     Logger.log('⚠️  Bootstrap already completed. Delete BOOTSTRAP_COMPLETED property to re-run.');
@@ -95,9 +185,16 @@ function bootstrap_Initialize6MonthHistory() {
   props.setProperty('BOOTSTRAP_TA_STARS', taStars.toString());
   props.setProperty('BOOTSTRAP_COMPLETED', 'true');
 
+  // Seed SEEN_REVIEW_IDS so the first weekly run won't re-count any of these.
+  var seedKeys = [];
+  gmapsAll.forEach(function(r) { seedKeys.push(reviewKey(r)); });
+  taAll.forEach(function(r)    { seedKeys.push(reviewKey(r)); });
+  saveSeenReviewKeys(seedKeys);
+
   Logger.log('💾 Saved Bootstrap:');
   Logger.log('   Google Maps: ' + gmapsCount + ' reviews, ' + gmapsStars + ' stars');
   Logger.log('   TripAdvisor: ' + taCount + ' reviews, ' + taStars + ' stars');
+  Logger.log('   Seeded SEEN_REVIEW_IDS with ' + seedKeys.length + ' keys');
   Logger.log('');
   Logger.log('✅ Bootstrap complete.');
 }
@@ -106,97 +203,173 @@ function bootstrap_Initialize6MonthHistory() {
 // MAIN PRODUCTION FUNCTION
 // ============================================================
 function runWeeklyReport() {
-  var C = getConfig();
-  Logger.log('');
-  Logger.log('╔════════════════════════════════════════════╗');
-  Logger.log('║ AKWL Weekly Reviews Engine v4.11          ║');
-  Logger.log('╚════════════════════════════════════════════╝');
-  Logger.log('');
-
-  var props = PropertiesService.getScriptProperties();
-  if (props.getProperty('BOOTSTRAP_COMPLETED') !== 'true') {
-    Logger.log('⚠️  BOOTSTRAP NOT INITIALIZED');
-    Logger.log('   Run bootstrap_Initialize6MonthHistory() first');
+  // Prevent overlapping executions. If another instance is running, abort.
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000); // wait up to 30 s for any in-progress run to finish
+  } catch (e) {
+    Logger.log('⚠  Could not acquire script lock — another run in progress. Aborting.');
     return;
   }
 
-  var win = getWeekWindow();
-  Logger.log('📅 DATE WINDOW:');
-  Logger.log('   Start: ' + win.startDateStr + ' (Sunday)');
-  Logger.log('   End: ' + win.endDateStr + ' (Saturday)');
-  Logger.log('   Label: ' + win.weekLabel);
-  Logger.log('');
+  var C = getConfig();
+  try {
+    Logger.log('');
+    Logger.log('╔════════════════════════════════════════════╗');
+    Logger.log('║ AKWL Weekly Reviews Engine v4.11.2        ║');
+    Logger.log('╚════════════════════════════════════════════╝');
+    Logger.log('');
 
-  Logger.log('👥 Loading guides from sheet...');
-  var guides = fetchGuideList(C);
-  Logger.log('   ✓ Loaded ' + guides.length + ' guides');
-  Logger.log('   Guides: ' + guides.join(', '));
-  Logger.log('');
+    var props = PropertiesService.getScriptProperties();
+    if (props.getProperty('BOOTSTRAP_COMPLETED') !== 'true') {
+      Logger.log('⚠️  BOOTSTRAP NOT INITIALIZED');
+      Logger.log('   Run bootstrap_Initialize6MonthHistory() first');
+      notifyFailure(C, 'Bootstrap missing',
+        'runWeeklyReport aborted because BOOTSTRAP_COMPLETED is not set.\n' +
+        'Run bootstrap_Initialize6MonthHistory() once before scheduling.');
+      return;
+    }
 
-  Logger.log('📡 Fetching reviews from Apify...');
-  var gmapsRaw = fetchApifyReviews('gmaps', C, 50);
-  Logger.log('   ✓ Google Maps: ' + gmapsRaw.length + ' reviews');
-  var taRaw = fetchApifyReviews('tripadvisor', C, 50);
-  Logger.log('   ✓ TripAdvisor: ' + taRaw.length + ' reviews');
-  Logger.log('');
+    var win = getWeekWindow();
+    Logger.log('📅 DATE WINDOW:');
+    Logger.log('   Start: ' + win.startDateStr + ' (Sunday)');
+    Logger.log('   End: ' + win.endDateStr + ' (Saturday)');
+    Logger.log('   Label: ' + win.weekLabel);
+    Logger.log('');
 
-  Logger.log('🔍 FILTERING BY DATE RANGE:');
-  var gmapsWeek = filterByDateRange(gmapsRaw, win.startDateStr, win.endDateStr, 'gmaps');
-  Logger.log('   Google Maps in range: ' + gmapsWeek.length);
-  var taWeek = filterByDateRange(taRaw, win.startDateStr, win.endDateStr, 'tripadvisor');
-  Logger.log('   TripAdvisor in range: ' + taWeek.length);
-  Logger.log('');
+    Logger.log('👥 Loading guides from sheet...');
+    var guides = fetchGuideList(C);
+    Logger.log('   ✓ Loaded ' + guides.length + ' guides');
+    Logger.log('   Guides: ' + guides.join(', '));
+    Logger.log('');
 
-  Logger.log('🎯 MATCHING REVIEWS TO GUIDES:');
-  var allReviews = gmapsWeek.concat(taWeek);
-  var matched = matchReviewsToGuides(allReviews, guides);
-  Logger.log('   Total matched: ' + matched.length);
-  Logger.log('');
+    // -------- Fetch each platform independently. One failure doesn't kill the
+    //          other. Collect errors and notify at the end. --------
+    Logger.log('📡 Fetching reviews from Apify...');
+    var gmapsRaw = [];
+    var taRaw    = [];
+    var fetchErrors = [];
 
-  var metrics = calculateMetrics(matched, guides, gmapsWeek, taWeek);
-  var running = updateRunningState_IncrementalAdd(gmapsWeek, taWeek);
+    try {
+      gmapsRaw = fetchApifyReviews('gmaps', C, 50);
+      Logger.log('   ✓ Google Maps: ' + gmapsRaw.length + ' reviews');
+    } catch (e) {
+      Logger.log('   ✗ Google Maps fetch failed: ' + e.message);
+      fetchErrors.push('Google Maps: ' + e.message);
+    }
 
-  Logger.log('📝 Updating sheets...');
-  updateWeeklyReviewsTab(C, metrics, guides, win.sundayLabel);
-  updateFlaggedReviewsTab(C, metrics, win.weekLabel);
-  Logger.log('   ✓ Sheets updated');
-  Logger.log('');
+    try {
+      taRaw = fetchApifyReviews('tripadvisor', C, 50);
+      Logger.log('   ✓ TripAdvisor: ' + taRaw.length + ' reviews');
+    } catch (e) {
+      Logger.log('   ✗ TripAdvisor fetch failed: ' + e.message);
+      fetchErrors.push('TripAdvisor: ' + e.message);
+    }
+    Logger.log('');
 
-  Logger.log('💾 Pushing to GitHub...');
-  var jsonData = generateJSONData(metrics, running, win.weekLabel, C);
-  pushToGitHub(jsonData, C);
-  Logger.log('   ✓ data.json pushed');
-  Logger.log('');
+    if (fetchErrors.length > 0) {
+      notifyFailure(C, 'Apify scrape failure — ' + win.weekLabel,
+        'One or more Apify scrapes failed during the weekly run:\n\n' +
+        fetchErrors.join('\n\n') +
+        '\n\nThe report continues with whatever platforms succeeded. ' +
+        'Check the Apps Script execution log for details.');
+    }
 
-  Logger.log('📧 Creating email (HTML + plain-text fallback)...');
-  createEmailDraftHTML(metrics, running, win.weekLabel, C);
-  Logger.log('   ✓ Email draft created');
-  Logger.log('');
+    if (gmapsRaw.length === 0 && taRaw.length === 0) {
+      Logger.log('⛔ Both Apify scrapes returned no data. Aborting before sheets/email.');
+      notifyFailure(C, 'Weekly run aborted — ' + win.weekLabel,
+        'Both Google Maps and TripAdvisor scrapes failed or returned zero items. ' +
+        'No sheets/email/GitHub updates were made. Cumulative state was NOT advanced.');
+      return;
+    }
 
-  Logger.log('╔════════════════════════════════════════════╗');
-  Logger.log('║        ✅ COMPLETED SUCCESSFULLY          ║');
-  Logger.log('╚════════════════════════════════════════════╝');
-  Logger.log('');
-  Logger.log('📊 THIS WEEK SUMMARY:');
-  Logger.log('   Google Maps: ' + metrics.gmapsCount + ' reviews, avg ' + metrics.gmapsAvg + '★');
-  Logger.log('   TripAdvisor: ' + metrics.taCount + ' reviews, avg ' + metrics.taAvg + '★');
-  Logger.log('   Total Bonuses: $' + metrics.totalBonus);
-  Logger.log('');
-  Logger.log('🔢 ALL-TIME RUNNING AVERAGES:');
-  Logger.log('   Google Maps: ' + running.gmaps.avg + '★ (' + running.gmaps.count + ' total)');
-  Logger.log('   TripAdvisor: ' + running.ta.avg + '★ (' + running.ta.count + ' total)');
-  Logger.log('   Combined:    ' + running.combined.avg + '★ (' + running.combined.count + ' total)');
-  Logger.log('');
+    Logger.log('🔍 FILTERING BY DATE RANGE:');
+    var gmapsWeek = filterByDateRange(gmapsRaw, win.startDateStr, win.endDateStr, 'gmaps');
+    Logger.log('   Google Maps in range: ' + gmapsWeek.length);
+    var taWeek = filterByDateRange(taRaw, win.startDateStr, win.endDateStr, 'tripadvisor');
+    Logger.log('   TripAdvisor in range: ' + taWeek.length);
+    Logger.log('');
+
+    // -------- Dedup against reviews seen in any previous run. --------
+    Logger.log('🧹 DEDUP against SEEN_REVIEW_IDS:');
+    var seenSet = {};
+    getSeenReviewKeys().forEach(function(k){ seenSet[k] = true; });
+    var gmBefore = gmapsWeek.length, taBefore = taWeek.length;
+    gmapsWeek = dedupReviews(gmapsWeek, seenSet);
+    taWeek    = dedupReviews(taWeek,    seenSet);
+    Logger.log('   Google Maps fresh: ' + gmapsWeek.length + '/' + gmBefore);
+    Logger.log('   TripAdvisor fresh: ' + taWeek.length + '/' + taBefore);
+    Logger.log('');
+
+    Logger.log('🎯 MATCHING REVIEWS TO GUIDES:');
+    var allReviews = gmapsWeek.concat(taWeek);
+    var matched = matchReviewsToGuides(allReviews, guides);
+    Logger.log('   Total matched: ' + matched.length);
+    Logger.log('');
+
+    var metrics = calculateMetrics(matched, guides, gmapsWeek, taWeek);
+    // Compute the cumulative running state but DO NOT persist yet — only after
+    // sheets/email/github succeed below.
+    var running = computeRunningState(gmapsWeek, taWeek);
+
+    Logger.log('📝 Updating sheets...');
+    updateWeeklyReviewsTab(C, metrics, guides, win.sundayLabel);
+    updateFlaggedReviewsTab(C, metrics, win.weekLabel);
+    Logger.log('   ✓ Sheets updated');
+    Logger.log('');
+
+    Logger.log('💾 Pushing to GitHub...');
+    var jsonData = generateJSONData(metrics, running, win.weekLabel, C);
+    pushToGitHub(jsonData, C);
+    Logger.log('   ✓ data.json pushed');
+    Logger.log('');
+
+    Logger.log('📧 Creating email (HTML + plain-text fallback)...');
+    createEmailDraftHTML(metrics, running, win.weekLabel, C);
+    Logger.log('   ✓ Email draft created');
+    Logger.log('');
+
+    // -------- Everything above succeeded. Persist state LAST so a partial
+    //          failure earlier does not advance the cumulative totals. --------
+    persistRunningState(running);
+    saveSeenReviewKeys(Object.keys(seenSet));
+    Logger.log('💾 Running state + seen-keys persisted.');
+    Logger.log('');
+
+    Logger.log('╔════════════════════════════════════════════╗');
+    Logger.log('║        ✅ COMPLETED SUCCESSFULLY          ║');
+    Logger.log('╚════════════════════════════════════════════╝');
+    Logger.log('');
+    Logger.log('📊 THIS WEEK SUMMARY:');
+    Logger.log('   Google Maps: ' + metrics.gmapsCount + ' reviews, avg ' + metrics.gmapsAvg + '★');
+    Logger.log('   TripAdvisor: ' + metrics.taCount + ' reviews, avg ' + metrics.taAvg + '★');
+    Logger.log('   Total Bonuses: $' + metrics.totalBonus);
+    Logger.log('');
+    Logger.log('🔢 ALL-TIME RUNNING AVERAGES:');
+    Logger.log('   Google Maps: ' + running.gmaps.avg + '★ (' + running.gmaps.count + ' total)');
+    Logger.log('   TripAdvisor: ' + running.ta.avg + '★ (' + running.ta.count + ' total)');
+    Logger.log('   Combined:    ' + running.combined.avg + '★ (' + running.combined.count + ' total)');
+    Logger.log('');
+  } catch (e) {
+    Logger.log('💥 Unhandled error: ' + e.message);
+    Logger.log(e.stack || '(no stack)');
+    notifyFailure(C, 'Unhandled error during weekly run',
+      'runWeeklyReport threw an unhandled error:\n\n' + e.message +
+      '\n\nStack:\n' + (e.stack || '(no stack)') +
+      '\n\nCumulative state was NOT advanced.');
+    throw e; // re-throw so Apps Script shows the failure in the executions list
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // ============================================================
 // DATE WINDOW - FIXED FOR SUNDAY START
 // ============================================================
 function getWeekWindow() {
-  var tz = 'America/Anchorage';
   var now = new Date();
 
-  var todayStr = Utilities.formatDate(now, tz, 'yyyy-MM-dd');
+  var todayStr = Utilities.formatDate(now, TZ, 'yyyy-MM-dd');
   var parts = todayStr.split('-');
   var year = parseInt(parts[0]);
   var month = parseInt(parts[1]);
@@ -204,7 +377,7 @@ function getWeekWindow() {
 
   var todayUTC = new Date(Date.UTC(year, month-1, day));
 
-  var dayName = Utilities.formatDate(now, tz, 'EEEE');
+  var dayName = Utilities.formatDate(now, TZ, 'EEEE');
   var dayMap = { 'Sunday':0,'Monday':1,'Tuesday':2,'Wednesday':3,'Thursday':4,'Friday':5,'Saturday':6 };
   var dow = dayMap[dayName];
 
@@ -267,9 +440,10 @@ function fetchGuideList(C) {
 }
 
 function fetchApifyReviews(platform, C, maxCount) {
-  var maxCount = maxCount || 50;
-  var actorId, input;
+  maxCount = maxCount || 50;
+  if (!C.APIFY_TOKEN) throw new Error('APIFY_TOKEN is not set in Script Properties');
 
+  var actorId, input;
   if (platform === 'gmaps') {
     actorId = 'compass~google-maps-reviews-scraper';
     input = { startUrls: [{ url: C.GMAPS_URL }], maxReviews: maxCount, reviewsSort: 'newest', language: 'en' };
@@ -278,38 +452,48 @@ function fetchApifyReviews(platform, C, maxCount) {
     input = { startUrls: [{ url: C.TA_URL }], maxReviews: maxCount, sort: 'NEWEST' };
   }
 
-  var runResp = UrlFetchApp.fetch('https://api.apify.com/v2/acts/'+actorId+'/runs?token='+C.APIFY_TOKEN,
-    { method:'post', contentType:'application/json', payload:JSON.stringify(input), muteHttpExceptions:true });
+  var runResp = fetchWithRetry(
+    'https://api.apify.com/v2/acts/' + actorId + '/runs?token=' + C.APIFY_TOKEN,
+    { method:'post', contentType:'application/json', payload:JSON.stringify(input), muteHttpExceptions:true }
+  );
 
   var runData = JSON.parse(runResp.getContentText());
-  if (!runData.data || !runData.data.id) throw new Error('Apify failed');
+  if (!runData.data || !runData.data.id) throw new Error('Apify run failed to start: ' + runResp.getContentText());
 
   var runId = runData.data.id, datasetId = runData.data.defaultDatasetId;
   var status = 'RUNNING', attempts = 0;
 
-  while (status!=='SUCCEEDED' && attempts<20) {
+  // Poll every 15 s up to 20 times (5 min total).
+  while (status !== 'SUCCEEDED' && attempts < 20) {
     Utilities.sleep(15000);
-    var s = JSON.parse(UrlFetchApp.fetch('https://api.apify.com/v2/actor-runs/'+runId+'?token='+C.APIFY_TOKEN,{muteHttpExceptions:true}).getContentText());
+    var s = JSON.parse(fetchWithRetry(
+      'https://api.apify.com/v2/actor-runs/' + runId + '?token=' + C.APIFY_TOKEN,
+      { muteHttpExceptions: true }
+    ).getContentText());
     status = s.data.status;
     attempts++;
+    if (status === 'FAILED' || status === 'ABORTED' || status === 'TIMED-OUT') {
+      throw new Error('Apify run ' + runId + ' ended with status ' + status);
+    }
   }
 
-  if (status!=='SUCCEEDED') throw new Error('Apify timeout');
+  if (status !== 'SUCCEEDED') throw new Error('Apify run ' + runId + ' did not succeed within ' + (15*attempts) + 's (status=' + status + ')');
 
-  var items = JSON.parse(UrlFetchApp.fetch('https://api.apify.com/v2/datasets/'+datasetId+'/items?token='+C.APIFY_TOKEN+'&limit=200',{muteHttpExceptions:true}).getContentText());
-  return items.map(function(r){r._platform=platform;return r;});
+  var items = JSON.parse(fetchWithRetry(
+    'https://api.apify.com/v2/datasets/' + datasetId + '/items?token=' + C.APIFY_TOKEN + '&limit=200',
+    { muteHttpExceptions: true }
+  ).getContentText());
+  return items.map(function(r){ r._platform = platform; return r; });
 }
 
 function filterByDateRange(reviews, startDateStr, endDateStr, platform) {
-  var tz = 'America/Anchorage';
-
   var filtered = reviews.filter(function(r) {
     var raw = r.publishedAtDate || r.publishedDate || r.date || r.reviewDate || r.time || '';
     if (!raw) return false;
     try {
       var d = new Date(raw);
       if (isNaN(d.getTime())) return false;
-      var dStr = Utilities.formatDate(d, tz, 'yyyy-MM-dd');
+      var dStr = Utilities.formatDate(d, TZ, 'yyyy-MM-dd');
       var inRange = dStr >= startDateStr && dStr <= endDateStr;
       if (inRange) {
         Logger.log('   MATCH (' + platform + '): ' + dStr + ' | ' + (r.text||r.reviewText||'').substring(0,50));
@@ -444,40 +628,46 @@ function calculateMetrics(matched, guides, gmapsWeek, taWeek) {
   };
 }
 
-function updateRunningState_IncrementalAdd(gmapsWeek, taWeek) {
+// Pure: reads the persisted cumulative totals, adds this week's deltas, and
+// returns the new state. Does NOT write back — caller decides when to persist.
+function computeRunningState(gmapsWeek, taWeek) {
   var props = PropertiesService.getScriptProperties();
 
-  var gmapsCount = parseInt(props.getProperty('BOOTSTRAP_GMAPS_COUNT')||'0');
-  var gmapsStars = parseFloat(props.getProperty('BOOTSTRAP_GMAPS_STARS')||'0');
-  var taCount = parseInt(props.getProperty('BOOTSTRAP_TA_COUNT')||'0');
-  var taStars = parseFloat(props.getProperty('BOOTSTRAP_TA_STARS')||'0');
+  var gmapsCount = parseInt(props.getProperty('BOOTSTRAP_GMAPS_COUNT') || '0');
+  var gmapsStars = parseFloat(props.getProperty('BOOTSTRAP_GMAPS_STARS') || '0');
+  var taCount    = parseInt(props.getProperty('BOOTSTRAP_TA_COUNT') || '0');
+  var taStars    = parseFloat(props.getProperty('BOOTSTRAP_TA_STARS') || '0');
 
   gmapsWeek.forEach(function(r) {
-    var rat = parseInt(r.stars||r.rating||0);
+    var rat = parseInt(r.stars || r.rating || 0);
     if (rat > 0) { gmapsCount++; gmapsStars += rat; }
   });
-
   taWeek.forEach(function(r) {
-    var rat = parseInt(r.rating||r.bubbleRating||0);
+    var rat = parseInt(r.rating || r.bubbleRating || 0);
     if (rat > 0) { taCount++; taStars += rat; }
   });
 
-  props.setProperty('BOOTSTRAP_GMAPS_COUNT', gmapsCount.toString());
-  props.setProperty('BOOTSTRAP_GMAPS_STARS', gmapsStars.toString());
-  props.setProperty('BOOTSTRAP_TA_COUNT', taCount.toString());
-  props.setProperty('BOOTSTRAP_TA_STARS', taStars.toString());
-
-  var gmapsAvg = gmapsCount > 0 ? (gmapsStars / gmapsCount).toFixed(2) : '0.00';
-  var taAvg = taCount > 0 ? (taStars / taCount).toFixed(2) : '0.00';
+  var gmapsAvg   = gmapsCount > 0 ? (gmapsStars / gmapsCount).toFixed(2) : '0.00';
+  var taAvg      = taCount    > 0 ? (taStars / taCount).toFixed(2)       : '0.00';
   var totalCount = gmapsCount + taCount;
   var totalStars = gmapsStars + taStars;
   var combinedAvg = totalCount > 0 ? (totalStars / totalCount).toFixed(2) : '0.00';
 
   return {
-    gmaps: { count: gmapsCount, avg: gmapsAvg },
-    ta: { count: taCount, avg: taAvg },
+    gmaps:    { count: gmapsCount, stars: gmapsStars, avg: gmapsAvg },
+    ta:       { count: taCount,    stars: taStars,    avg: taAvg },
     combined: { count: totalCount, avg: combinedAvg }
   };
+}
+
+// Writes the computed running state to Script Properties. Call this LAST so a
+// partial failure in sheets/email/github doesn't advance the cumulative totals.
+function persistRunningState(state) {
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('BOOTSTRAP_GMAPS_COUNT', state.gmaps.count.toString());
+  props.setProperty('BOOTSTRAP_GMAPS_STARS', state.gmaps.stars.toString());
+  props.setProperty('BOOTSTRAP_TA_COUNT',    state.ta.count.toString());
+  props.setProperty('BOOTSTRAP_TA_STARS',    state.ta.stars.toString());
 }
 
 function updateWeeklyReviewsTab(C, metrics, guides, sundayLabel) {
@@ -564,6 +754,8 @@ function generateJSONData(metrics, runningState, weekLabel, C) {
 }
 
 function pushToGitHub(jsonContent, C) {
+  if (!C.GITHUB_TOKEN) throw new Error('GITHUB_TOKEN is not set in Script Properties');
+
   var apiUrl = 'https://api.github.com/repos/' + C.GITHUB_USERNAME + '/' + C.GITHUB_REPO + '/contents/' + C.GITHUB_FILE;
   var headers = {
     'Authorization': 'token ' + C.GITHUB_TOKEN,
@@ -573,31 +765,35 @@ function pushToGitHub(jsonContent, C) {
 
   var sha = null;
   try {
-    var get = UrlFetchApp.fetch(apiUrl, { headers: headers, muteHttpExceptions: true });
+    var get = fetchWithRetry(apiUrl, { headers: headers, muteHttpExceptions: true });
     if (get.getResponseCode() === 200) {
       sha = JSON.parse(get.getContentText()).sha;
     }
-  } catch (e) {}
+  } catch (e) {
+    Logger.log('   (GET sha failed, will PUT without sha): ' + e.message);
+  }
 
   var blob = Utilities.newBlob(jsonContent, 'application/json', 'UTF-8');
   var encoded = Utilities.base64Encode(blob.getBytes());
 
   var payload = {
-    message: 'Dashboard update — ' + Utilities.formatDate(new Date(), 'America/Anchorage', 'yyyy-MM-dd HH:mm'),
+    message: 'Dashboard update — ' + Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm'),
     content: encoded,
     branch: C.GITHUB_BRANCH
   };
-
   if (sha) payload.sha = sha;
 
-  var put = UrlFetchApp.fetch(apiUrl, {
+  var put = fetchWithRetry(apiUrl, {
     method: 'put',
     headers: headers,
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   });
 
-  if (put.getResponseCode() !== 200 && put.getResponseCode() !== 201) throw new Error('GitHub push failed');
+  var code = put.getResponseCode();
+  if (code !== 200 && code !== 201) {
+    throw new Error('GitHub push failed: HTTP ' + code + ' — ' + put.getContentText().substring(0, 300));
+  }
 }
 
 function createEmailDraftHTML(metrics, runningState, weekLabel, C) {
