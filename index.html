@@ -133,6 +133,7 @@ footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:0.78rem;
     <button class="btn" onclick="document.getElementById('upload-input').click()">↑ Upload data.json</button>
     <input type="file" id="upload-input" accept="application/json,.json" style="display:none" onchange="handleUpload(event)">
     <button class="btn btn-ghost" onclick="downloadData()">↓ Download</button>
+    <button class="btn btn-ghost" onclick="resetData()" title="Clear saved data and reload baked-in defaults">↺ Reset</button>
     <div class="entry">
       <span>Last data entry</span>
       <strong id="last-entry">—</strong>
@@ -1842,8 +1843,26 @@ const DEFAULT_DATA = {
     "notes": "Historical monthly data (Jan\u2013Apr 2026) seeded from team Reviews Tracker. Weekly history starts populating from May 2026 onward via WeeklyReviewsEngine.gs. Bonus rule: $10 per Google 5\u2605, $5 per TripAdvisor 5\u2605. Other platforms count toward review totals but no bonus."
   }
 };
+const STORAGE_KEY = 'akwl-reviews-data-v2';
 
-let DATA = DEFAULT_DATA;
+function loadFromStorage(){
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if(!stored) return null;
+    const d = JSON.parse(stored);
+    if(!d.ytd2026 && !d.allTime) return null;
+    return d;
+  } catch(e) { return null; }
+}
+
+function saveToStorage(data){
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return true;
+  } catch(e) { console.warn('localStorage save failed:', e); return false; }
+}
+
+let DATA = loadFromStorage() || DEFAULT_DATA;
 let CHARTS = {};
 let STATE = {
   avg: {view:'monthly', platforms:{}},
@@ -1871,13 +1890,23 @@ function handleUpload(e){
       const d = JSON.parse(ev.target.result);
       if(!d.ytd2026 && !d.allTime) throw new Error('Missing ytd2026 field');
       DATA = d;
+      const saved = saveToStorage(d);
       initState();
       render();
-      toast('✓ Loaded ' + f.name);
+      toast(saved ? '✓ Saved & loaded ' + f.name : '✓ Loaded (not saved — storage full)');
     }catch(err){ toast('✗ Invalid file: '+err.message, true); }
   };
   r.readAsText(f);
   e.target.value = '';
+}
+
+function resetData(){
+  if(!confirm('Reset to baked-in data? This will clear all uploaded data.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  DATA = DEFAULT_DATA;
+  initState();
+  render();
+  toast('✓ Reset to default');
 }
 
 function downloadData(){

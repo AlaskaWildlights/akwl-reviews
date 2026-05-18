@@ -1,43 +1,74 @@
 # Alaska Wild Lights — Reviews Dashboard
 
-Single self-contained `index.html` with data baked in. Drag-and-drop deploy.
+Sistema que corre solo cada semana. Vos solo tenés que subir un archivo al dashboard.
 
-## Deploy (10 seconds)
+## Flujo semanal
 
-1. Open <https://app.netlify.com/drop>
-2. Drag `index.html` into the page.
-3. Done — Netlify gives you a public URL.
+```
+Domingo (automático):
+  Apps Script corre
+    ├─ Scrapea Google Maps + TripAdvisor via Apify
+    ├─ Acumula historia (monthly + weekly + byGuide)
+    ├─ Guarda data.json en Google Drive (backend)
+    └─ Te emaila el data.json como adjunto a awlsaray@gmail.com
 
-No build, no server, no tokens, no GitHub Pages cache to fight.
+Vos (30 segundos):
+  1. Abrís el email con asunto "AKWL Weekly Reviews — ... · Dashboard data attached"
+  2. Descargás el adjunto akwl-reviews-data.json
+  3. Abrís el dashboard en Netlify (la URL pública)
+  4. Click "↑ Upload data.json" → seleccionás el archivo
+  5. Listo. El navegador lo guarda localmente, no tenés que hacerlo de nuevo si volvés a abrir.
+```
 
-## How it works
+## Setup inicial (una vez)
 
-- `WeeklyReviewsEngine.gs` runs every week in Google Apps Script. It scrapes Google Maps + TripAdvisor via Apify, matches reviews to guides, calculates bonuses, and pushes a fresh `index.html` (with data baked in) to this repo's `main` branch.
-- To publish the update, drag the new `index.html` to Netlify Drop. (Or set up Netlify auto-deploy from GitHub — see below.)
-- The dashboard runs entirely client-side. No runtime fetches, no cache games.
+### 1. Deploy a Netlify
+1. Abrí <https://app.netlify.com/drop>
+2. Arrastrá `index.html` → Netlify te da una URL pública
+3. Guardá esa URL — es donde abrirás el dashboard cada semana
 
-## Manual data upload
+### 2. Configurá el Apps Script
+1. Abrí Google Apps Script (Extensions → Apps Script desde Google Sheets)
+2. Pegá el contenido de `WeeklyReviewsEngine.gs` v4.12 (reemplaza el actual)
+3. Project Settings → Script Properties → agregá:
+   - `DASHBOARD_URL` = la URL de Netlify que te dieron
+4. Triggers (⏰) → "Add Trigger":
+   - Function: `runWeeklyReport`
+   - Event: Time-driven, Week timer, Sunday, hora a tu gusto
+5. Save
 
-The dashboard has an **↑ Upload data.json** button. Drop a `data.json` exported by the Apps Script and the dashboard re-renders without any redeploy. Useful for ad-hoc previews.
+Listo. La primera vez que corra, va a:
+- Crear el archivo `akwl-reviews-data.json` en tu Google Drive
+- Guardar el ID en Script Properties (`DRIVE_FILE_ID`)
+- Emailarte el primer adjunto
 
-## Files
+## Archivos del repo
 
-| File | Purpose |
+| Archivo | Para qué |
 |---|---|
-| `index.html` | The deployable dashboard. Data baked in. Drag to Netlify. |
-| `index.template.html` | Template with `/*__DATA_JSON__*/` placeholder. The Apps Script fills this in. |
-| `data.json` | Latest data snapshot. Source of truth. Apps Script regenerates weekly. |
-| `WeeklyReviewsEngine.gs` | Google Apps Script that scrapes + emails + pushes. |
+| `index.html` | El dashboard. Drag-and-drop a Netlify una vez. |
+| `index.template.html` | Template del dashboard (placeholder `/*__DATA_JSON__*/`). |
+| `data.json` | Snapshot inicial baked-in al index.html (Jan-Abr histórico). |
+| `WeeklyReviewsEngine.gs` | El script de Apps Script que corre cada domingo. |
 
-## Historical data
+## Backend (estado persistente)
 
-`history.monthly` for Jan–Apr 2026 was seeded from the team's Reviews Tracker spreadsheet. From May 2026 onward, `WeeklyReviewsEngine.gs` appends to it automatically.
+El `data.json` con TODA la historia acumulada vive en **tu Google Drive** (archivo `akwl-reviews-data.json`). Cada domingo el script:
+1. Lo lee de Drive
+2. Le agrega la semana actual
+3. Lo guarda devuelta en Drive
+4. Te lo emaila como adjunto
 
-YTD bonuses for Jan–Apr are **estimates** (weighted by each month's Google/TripAdvisor 5★ mix). From May onward, bonuses are tracked precisely.
+No depende de GitHub Pages (cache), no depende de servidores externos, no depende de tokens que expiren. Solo Apps Script + Drive + tu navegador.
 
-## Optional: auto-deploy from GitHub
+## Si algo se rompe
 
-1. In Netlify, "Add new site" → "Import from Git" → pick this repo.
-2. Build command: leave empty.
-3. Publish directory: `/`.
-4. Every push to `main` re-publishes. No drag-and-drop needed.
+- **Email no llegó**: Revisá Apps Script → Executions, ver el último run
+- **Adjunto vacío**: Verificá que `DRIVE_FILE_ID` esté en Script Properties
+- **Dashboard muestra data vieja**: Click el botón "↺ Reset" para limpiar localStorage, luego subí el archivo nuevo
+- **Quiero re-correr la semana**: Apps Script → seleccionar `runWeeklyReport` → Run
+
+## Próximos pasos opcionales
+
+- **Auto-deploy Netlify desde GitHub**: configurar deploy desde repo para no draggar `index.html` nunca más (solo cuando cambia el template)
+- **Bootstrap May 2026 con data real**: correr `bootstrap_SeedMonthlyMay2026()` (si existe) para sembrar las semanas de mayo previas al primer run

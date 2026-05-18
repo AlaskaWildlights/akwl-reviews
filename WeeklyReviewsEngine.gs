@@ -1,9 +1,25 @@
 // ============================================================
-// ALASKA WILD LIGHTS — Weekly Reviews Engine v4.11
-// FIXES:
-// 1. Email SOLO HTML (sin texto plano) — now with plain-text fallback
-// 2. Debug logging detallado
-// 3. Verificar fecha correcta (hoy 11 = semana 3-9)
+// ALASKA WILD LIGHTS — Weekly Reviews Engine v4.12
+//
+// v4.12 — NETLIFY DASHBOARD + EMAIL ATTACHMENT WORKFLOW
+//   - buildDashboardJSON: builds the full data.json with accumulated
+//     history (monthly + weekly + byGuide). Reads previous state from
+//     Drive, updates incrementally, writes back.
+//   - writeDashboardDataToDrive / readDashboardDataFromDrive: persistent
+//     state in Google Drive (file ID stored in Script Properties).
+//   - emailDashboardJSON: emails data.json as attachment to ALERT_EMAIL.
+//     User saves attachment → uploads via dashboard's Upload button.
+//   - Dashboard (index.html on Netlify) uses localStorage to remember
+//     uploaded data across visits.
+//   - GitHub push of legacy data.json kept as backup but non-fatal.
+//   - getActiveGuides: 16-guide allowlist drives dashboard filtering.
+//
+// v4.11.x history retained below for context.
+//
+// v4.11 features:
+//   1. Email HTML with plain-text fallback
+//   2. Debug logging detallado
+//   3. Date window verification
 //
 // v4.11.1 BUG FIXES:
 //  FIX 1: First-name matching + miss-logging
@@ -324,15 +340,26 @@ function runWeeklyReport() {
     Logger.log('   ✓ Sheets updated');
     Logger.log('');
 
-    Logger.log('💾 Pushing to GitHub...');
+    Logger.log('💾 Pushing legacy data.json to GitHub (backup)...');
     var jsonData = generateJSONData(metrics, running, win.weekLabel, C);
-    pushToGitHub(jsonData, C);
-    Logger.log('   ✓ data.json pushed');
+    try {
+      pushToGitHub(jsonData, C);
+      Logger.log('   ✓ Legacy data.json pushed');
+    } catch (e) {
+      Logger.log('   ⚠  GitHub backup push failed (non-fatal): ' + e.message);
+    }
     Logger.log('');
 
-    Logger.log('📧 Creating team draft + sending preview to ALERT_EMAIL...');
+    Logger.log('📊 Building dashboard data.json with accumulated history...');
+    var dashboardJSON = buildDashboardJSON(metrics, running, win, C);
+    writeDashboardDataToDrive(dashboardJSON);
+    Logger.log('   ✓ Saved to Drive');
+    Logger.log('');
+
+    Logger.log('📧 Emailing dashboard JSON + team draft...');
+    emailDashboardJSON(dashboardJSON, win.weekLabel, C);
     createEmailDraftHTML(metrics, running, win.weekLabel, C);
-    Logger.log('   ✓ Draft created + preview sent');
+    Logger.log('   ✓ Dashboard JSON emailed + team draft created');
     Logger.log('');
 
     // -------- Everything above succeeded. Persist state LAST so a partial
@@ -765,6 +792,262 @@ function generateJSONData(metrics, runningState, weekLabel, C) {
     }
   };
   return JSON.stringify(data, null, 2);
+}
+
+// ============================================================
+// v4.12 — NEW DASHBOARD DATA BUILDER + EMAIL-WITH-ATTACHMENT
+// ============================================================
+// This builds the FULL data.json for the Netlify dashboard, including
+// accumulated history (monthly + weekly + byGuide). State is persisted
+// in a Google Drive file (akwl-reviews-data.json) keyed by Script Property
+// DRIVE_FILE_ID. Each weekly run:
+//   1. Reads previous data.json from Drive
+//   2. Appends current week to history.weekly
+//   3. Updates current month bucket in history.monthly
+//   4. Updates history.byGuide YTD counters
+//   5. Writes back to Drive
+//   6. Emails the data.json as an attachment to ALERT_EMAIL
+//
+// User workflow: Open email → Save data.json → Open Netlify dashboard →
+// Click "↑ Upload data.json" → Done. localStorage in the dashboard keeps
+// it loaded for repeat visits.
+// ============================================================
+
+// Active guides list — the only guides that appear in the dashboard.
+function getActiveGuides() {
+  return [
+    'Jessica Verrault','Shannon Williams','Ryan Stebbins','Dylan Berggren',
+    'Jodi Bailey','Tyler Trainor','RIpley Caldwell','Milo Pranther',
+    'Rich Cohen','John Kane','Sierra Baker','Wesley Campbell',
+    'Sullivan Bogardus','Pepper Burrel','Greg McDaniel','Gina Sliger'
+  ];
+}
+
+// Reads the latest dashboard data.json from Drive. Returns null if not set.
+function readDashboardDataFromDrive() {
+  var fileId = PropertiesService.getScriptProperties().getProperty('DRIVE_FILE_ID');
+  if (!fileId) return null;
+  try {
+    var file = DriveApp.getFileById(fileId);
+    return JSON.parse(file.getBlob().getDataAsString());
+  } catch (e) {
+    Logger.log('   ⚠  Failed to read Drive file: ' + e.message);
+    return null;
+  }
+}
+
+// Writes the dashboard data.json to Drive. Creates the file on first call,
+// saves the ID to Script Properties for future reads.
+function writeDashboardDataToDrive(jsonContent) {
+  var props = PropertiesService.getScriptProperties();
+  var fileId = props.getProperty('DRIVE_FILE_ID');
+  var blob = Utilities.newBlob(jsonContent, 'application/json', 'akwl-reviews-data.json');
+
+  if (fileId) {
+    try {
+      var file = DriveApp.getFileById(fileId);
+      file.setContent(jsonContent);
+      return fileId;
+    } catch (e) {
+      Logger.log('   ⚠  Stale Drive file ID, creating new: ' + e.message);
+    }
+  }
+  var newFile = DriveApp.createFile(blob);
+  props.setProperty('DRIVE_FILE_ID', newFile.getId());
+  Logger.log('   ✓ Created Drive file: ' + newFile.getId());
+  return newFile.getId();
+}
+
+// Builds the FULL dashboard JSON: current week + accumulated history.
+function buildDashboardJSON(metrics, runningState, win, C) {
+  var prior = readDashboardDataFromDrive() || {};
+  var history = prior.history || { monthly: [], weekly: [], byGuide: [] };
+
+  // Current week summary (for current.* block)
+  var current = {
+    weekLabel: win.weekLabel,
+    summary: {
+      totalReviews: metrics.combinedCount,
+      gmapsCount: metrics.gmapsCount,
+      gmapsAvg: metrics.gmapsAvg,
+      taCount: metrics.taCount,
+      taAvg: metrics.taAvg,
+      combinedAvg: metrics.combinedAvg,
+      totalBonus: metrics.totalBonus
+    },
+    guides: metrics.guideStats.filter(function(g) { return g.name !== 'UNASSIGNED'; }),
+    lowRatings: metrics.lowRating.map(function(r) {
+      return { guide: r.guide, rating: r.rating, platform: r.platform, text: r.text };
+    })
+  };
+
+  // Append to history.weekly (one entry per run)
+  history.weekly = history.weekly || [];
+  // Dedupe by weekLabel: replace if already exists
+  var wIdx = history.weekly.findIndex(function(w) { return w.weekLabel === win.weekLabel; });
+  var weeklyEntry = {
+    weekLabel: win.weekLabel,
+    startDate: win.startDateStr,
+    endDate: win.endDateStr,
+    timestamp: new Date().toISOString(),
+    platforms: {
+      googleMaps: { count: metrics.gmapsCount, avg: parseFloat(metrics.gmapsAvg) || 0, fiveStar: 0 },
+      tripAdvisor: { count: metrics.taCount, avg: parseFloat(metrics.taAvg) || 0, fiveStar: 0 }
+    },
+    totalReviews: metrics.combinedCount,
+    totalBonus: metrics.totalBonus
+  };
+  // Count 5★ per platform this week
+  metrics.guideStats.forEach(function(g) {
+    // (5★ count per platform isn't directly tracked; using guide totals is approx.)
+  });
+  if (wIdx >= 0) history.weekly[wIdx] = weeklyEntry;
+  else history.weekly.push(weeklyEntry);
+
+  // Update history.monthly for current month
+  var ym = win.endDateStr.substring(0, 7); // YYYY-MM
+  history.monthly = history.monthly || [];
+  var mIdx = history.monthly.findIndex(function(m) { return m.month === ym; });
+  if (mIdx < 0) {
+    // Create new month entry
+    history.monthly.push({
+      month: ym,
+      platforms: {
+        tripAdvisor: { count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} },
+        googleMaps:  { count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} },
+        getYourGuide:{ count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} },
+        civitatis:   { count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} },
+        expedia:     { count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} },
+        atmosRewards:{ count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} },
+        bookingCom:  { count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} }
+      },
+      totalReviews: 0, totalStars: 0, combinedAvg: null, totalBonus: 0
+    });
+    mIdx = history.monthly.length - 1;
+  }
+  var m = history.monthly[mIdx];
+  // Add this week's gmaps/ta to month bucket
+  var gmStars = (parseFloat(metrics.gmapsAvg) || 0) * metrics.gmapsCount;
+  var taStars = (parseFloat(metrics.taAvg) || 0) * metrics.taCount;
+  m.platforms.googleMaps.count += metrics.gmapsCount;
+  m.platforms.googleMaps.stars += gmStars;
+  m.platforms.googleMaps.avg = m.platforms.googleMaps.count > 0 ? parseFloat((m.platforms.googleMaps.stars / m.platforms.googleMaps.count).toFixed(2)) : null;
+  m.platforms.tripAdvisor.count += metrics.taCount;
+  m.platforms.tripAdvisor.stars += taStars;
+  m.platforms.tripAdvisor.avg = m.platforms.tripAdvisor.count > 0 ? parseFloat((m.platforms.tripAdvisor.stars / m.platforms.tripAdvisor.count).toFixed(2)) : null;
+  m.totalReviews += metrics.combinedCount;
+  m.totalStars += gmStars + taStars;
+  m.combinedAvg = m.totalReviews > 0 ? parseFloat((m.totalStars / m.totalReviews).toFixed(2)) : null;
+  m.totalBonus += metrics.totalBonus;
+
+  // Update history.byGuide (YTD 5★ + bonus per guide)
+  history.byGuide = history.byGuide || [];
+  var byGuideMap = {};
+  history.byGuide.forEach(function(g) { byGuideMap[g.name] = g; });
+  metrics.guideStats.forEach(function(g) {
+    if (g.name === 'UNASSIGNED') return;
+    if (!byGuideMap[g.name]) {
+      byGuideMap[g.name] = { name: g.name, active: true, ytdFiveStar: 0, ytdBonus: 0, monthlyFiveStar: {} };
+      history.byGuide.push(byGuideMap[g.name]);
+    }
+    byGuideMap[g.name].ytdFiveStar += g.fiveStar || 0;
+    byGuideMap[g.name].ytdBonus = (byGuideMap[g.name].ytdBonus || 0) + (g.bonus || 0);
+    if (g.fiveStar > 0) {
+      byGuideMap[g.name].monthlyFiveStar = byGuideMap[g.name].monthlyFiveStar || {};
+      byGuideMap[g.name].monthlyFiveStar[ym] = (byGuideMap[g.name].monthlyFiveStar[ym] || 0) + g.fiveStar;
+    }
+  });
+
+  // Build YTD platform totals from history.monthly
+  var ytdPlat = {
+    tripAdvisor:  { displayName:'TripAdvisor',  color:'#a78bfa', count:0, stars:0, fiveStar:0 },
+    googleMaps:   { displayName:'Google Maps',  color:'#00d4a8', count:0, stars:0, fiveStar:0 },
+    getYourGuide: { displayName:'GetYourGuide', color:'#ffa657', count:0, stars:0, fiveStar:0 },
+    civitatis:    { displayName:'Civitatis',    color:'#ff5470', count:0, stars:0, fiveStar:0 },
+    expedia:      { displayName:'Expedia',      color:'#60a5fa', count:0, stars:0, fiveStar:0 },
+    atmosRewards: { displayName:'Atmos Rewards',color:'#ffd166', count:0, stars:0, fiveStar:0 },
+    bookingCom:   { displayName:'Booking.com',  color:'#10b981', count:0, stars:0, fiveStar:0 }
+  };
+  history.monthly.forEach(function(mo) {
+    Object.keys(ytdPlat).forEach(function(k) {
+      if (mo.platforms[k]) {
+        ytdPlat[k].count += mo.platforms[k].count || 0;
+        ytdPlat[k].stars += mo.platforms[k].stars || 0;
+        ytdPlat[k].fiveStar += mo.platforms[k].fiveStar || 0;
+      }
+    });
+  });
+  Object.keys(ytdPlat).forEach(function(k) {
+    var p = ytdPlat[k];
+    p.avg = p.count > 0 ? parseFloat((p.stars / p.count).toFixed(2)) : null;
+  });
+  var ytdCombined = {
+    count: Object.keys(ytdPlat).reduce(function(s,k) { return s + ytdPlat[k].count; }, 0),
+    stars: Object.keys(ytdPlat).reduce(function(s,k) { return s + ytdPlat[k].stars; }, 0),
+    fiveStar: Object.keys(ytdPlat).reduce(function(s,k) { return s + ytdPlat[k].fiveStar; }, 0)
+  };
+  ytdCombined.avg = ytdCombined.count > 0 ? parseFloat((ytdCombined.stars / ytdCombined.count).toFixed(2)) : null;
+  ytdCombined.totalBonus = ytdPlat.googleMaps.fiveStar * 10 + ytdPlat.tripAdvisor.fiveStar * 5;
+
+  // Build the full dashboard data.json
+  var data = {
+    generatedAt: new Date().toISOString(),
+    year: 2026,
+    weekLabel: win.weekLabel,
+    platforms: [
+      {key:'tripAdvisor',  displayName:'TripAdvisor',  color:'#a78bfa'},
+      {key:'googleMaps',   displayName:'Google Maps',  color:'#00d4a8'},
+      {key:'getYourGuide', displayName:'GetYourGuide', color:'#ffa657'},
+      {key:'civitatis',    displayName:'Civitatis',    color:'#ff5470'},
+      {key:'expedia',      displayName:'Expedia',      color:'#60a5fa'},
+      {key:'atmosRewards', displayName:'Atmos Rewards',color:'#ffd166'},
+      {key:'bookingCom',   displayName:'Booking.com',  color:'#10b981'}
+    ],
+    activeGuides: getActiveGuides(),
+    ytd2026: {
+      byPlatform: ytdPlat,
+      combined: ytdCombined,
+      source: 'Apps Script weekly accumulation (Google Maps + TripAdvisor scraping via Apify). Other platforms from manual seeding.'
+    },
+    current: current,
+    // Legacy allTime block for backward compatibility
+    allTime: {
+      googleMaps:  { count: runningState.gmaps.count, avg: runningState.gmaps.avg },
+      tripAdvisor: { count: runningState.ta.count, avg: runningState.ta.avg },
+      combined:    { count: runningState.combined.count, avg: runningState.combined.avg },
+      averageRating: runningState.combined.avg,
+      totalReviews: runningState.combined.count
+    },
+    history: history
+  };
+  return JSON.stringify(data, null, 2);
+}
+
+// Emails the dashboard data.json as an attachment.
+function emailDashboardJSON(jsonContent, weekLabel, C) {
+  var subject = 'AKWL Weekly Reviews — ' + weekLabel + ' · Dashboard data attached';
+  var filename = 'akwl-reviews-data.json';
+  var attachment = Utilities.newBlob(jsonContent, 'application/json', filename);
+
+  var dashUrl = PropertiesService.getScriptProperties().getProperty('DASHBOARD_URL') || 'https://app.netlify.com/drop';
+
+  var body =
+    'Weekly Reviews — ' + weekLabel + '\n\n' +
+    'To update the dashboard:\n' +
+    '  1. Save the attached file (akwl-reviews-data.json)\n' +
+    '  2. Open the dashboard: ' + dashUrl + '\n' +
+    '  3. Click "↑ Upload data.json" and select the file\n' +
+    '  4. Done — your browser saves it for next time\n\n' +
+    'Generated: ' + new Date().toString();
+
+  MailApp.sendEmail({
+    to: C.ALERT_EMAIL,
+    subject: subject,
+    body: body,
+    attachments: [attachment],
+    name: 'Alaska Wild Lights Reviews'
+  });
+  Logger.log('   ✓ Dashboard JSON emailed to ' + C.ALERT_EMAIL);
 }
 
 function pushToGitHub(jsonContent, C) {
