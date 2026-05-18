@@ -42,9 +42,7 @@ function getGuideAliases() {
   return {
     'dillion': 'Dylan Berggren',
     'regina': 'Gina Sliger',
-    'shannon': 'Shannon Williams',
-    // FIX 1: 'Jodi Ripley' alias so reviews mentioning only "Jodi" match.
-    'jodi': 'Jodi Ripley'
+    'shannon': 'Shannon Williams'
   };
 }
 
