@@ -210,7 +210,13 @@ function getWeekWindow() {
 
   Logger.log('DEBUG: Today is ' + todayStr + ' (' + dayName + ', dow=' + dow + ')');
 
-  var daysBack = dow === 0 ? 7 : dow;
+  // Always report on the PREVIOUS completed Sun-Sat week (Alaska time).
+  // Day boundaries are at 00:00 America/Anchorage.
+  //   Sun (dow=0) -> 7 days back to last Sunday  -> covers last week
+  //   Mon (dow=1) -> 8 days back to last Sunday  -> still covers last week
+  //   Sat (dow=6) -> 13 days back to prev Sunday -> covers week-before
+  // Run it any day of the new week, you always get the just-completed week.
+  var daysBack = dow + 7;
   var MS = 86400000;
 
   var sunUTC = new Date(todayUTC.getTime() - daysBack * MS);
