@@ -228,14 +228,18 @@
   <footer>Alaska Wild Lights Reviews Dashboard</footer>
 
   <script>
-    // GitHub raw content URL for data.json
-    const DATA_URL = 'https://raw.githubusercontent.com/AlaskaWildlights/akwl-reviews/main/data.json';
+    // Fetch data.json from the same origin (GitHub Pages serves it from the
+    // repo root). Bypasses raw.githubusercontent.com CDN cache that can lag
+    // 5+ minutes behind the latest push.
+    const DATA_URL = './data.json';
 
     let chartInstance = null;
 
     async function loadDashboard() {
       try {
-        const response = await fetch(DATA_URL);
+        // Cache-bust so neither the browser nor the GitHub Pages CDN serves
+        // a stale copy after a fresh push from the Apps Script run.
+        const response = await fetch(DATA_URL + '?t=' + Date.now(), { cache: 'no-store' });
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: Could not load data`);
         }
@@ -424,7 +428,9 @@
     }
 
     function escapeHtml(text) {
-      if (!text) return '';
+      // Treat null/undefined as empty, but preserve numeric 0 (otherwise
+      // "0 reviews" / "$0" / "0★" render as blank).
+      if (text === null || text === undefined) return '';
       const map = {
         '&': '&amp;',
         '<': '&lt;',
