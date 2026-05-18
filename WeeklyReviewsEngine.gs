@@ -319,47 +319,59 @@ function matchReviewsToGuides(reviews, guides) {
   var aliases = getGuideAliases();
   return reviews.map(function(r) {
     var text = ((r.text||r.reviewText||'')+ ' '+(r.title||'')).toLowerCase();
-    var assignedGuide = findGuideInText(text, guides, aliases);
-    r.assignedGuide = assignedGuide;
+    r.assignedGuides = findGuidesInText(text, guides, aliases);
+    // Keep a single-guide field for any legacy reader; first matched guide wins.
+    r.assignedGuide = r.assignedGuides[0];
     return r;
   });
 }
 
-// FIX 1: Added first-name matching loop and miss-logging for non-matches.
-function findGuideInText(text, guides, aliases) {
+// Returns ALL guides mentioned in the review text (deduped). A review may
+// credit multiple guides — e.g. "Jodi and Ripley were both great" returns
+// ['Jodi Bailey', 'RIpley Caldwell']. Falls back to ['UNASSIGNED'] when no
+// guide name is found.
+function findGuidesInText(text, guides, aliases) {
+  var matched = {};            // canonical name -> true (dedup set)
+  var words = text.match(/\b[\w'-]+\b/g) || [];
+
+  // 1. Alias substring match (e.g. "dillion" -> "Dylan Berggren").
   for (var alias in aliases) {
-    if (text.indexOf(alias) !== -1) return aliases[alias];
+    if (text.indexOf(alias) !== -1) matched[aliases[alias]] = true;
   }
+  // 2. Full-name substring match.
   for (var i = 0; i < guides.length; i++) {
-    if (text.indexOf(guides[i].toLowerCase()) !== -1) return guides[i];
+    if (text.indexOf(guides[i].toLowerCase()) !== -1) matched[guides[i]] = true;
   }
+  // 3. Last-name whole-word match (length >= 4 to avoid common words).
   for (var i = 0; i < guides.length; i++) {
     var parts = guides[i].toLowerCase().split(' ');
     var lastName = parts[parts.length - 1];
-    if (lastName.length >= 4) {
-      var words = text.match(/\b[\w'-]+\b/g) || [];
-      if (words.indexOf(lastName) !== -1) return guides[i];
+    if (lastName.length >= 4 && words.indexOf(lastName) !== -1) {
+      matched[guides[i]] = true;
     }
   }
-  // FIX 1: Also try matching first name only.
+  // 4. First-name whole-word match (length >= 4).
   for (var i = 0; i < guides.length; i++) {
     var firstName = guides[i].toLowerCase().split(' ')[0];
-    if (firstName.length >= 4) {
-      var words = text.match(/\b[\w'-]+\b/g) || [];
-      if (words.indexOf(firstName) !== -1) {
-        Logger.log('   FIRST NAME MATCH: ' + firstName + ' → ' + guides[i]);
-        return guides[i];
-      }
+    if (firstName.length >= 4 && words.indexOf(firstName) !== -1) {
+      matched[guides[i]] = true;
     }
   }
-  // FIX 1: Log why each guide failed to match so misses are debuggable.
-  Logger.log('   UNASSIGNED — text snippet: "' + text.substring(0, 120).replace(/\s+/g, ' ') + '"');
-  for (var i = 0; i < guides.length; i++) {
-    var p = guides[i].toLowerCase().split(' ');
-    Logger.log('     no match: ' + guides[i] + ' (tried full="' + guides[i].toLowerCase() +
-               '", last="' + p[p.length - 1] + '", first="' + p[0] + '")');
+
+  var result = Object.keys(matched);
+  if (result.length === 0) {
+    Logger.log('   UNASSIGNED — text snippet: "' + text.substring(0, 120).replace(/\s+/g, ' ') + '"');
+    for (var i = 0; i < guides.length; i++) {
+      var p = guides[i].toLowerCase().split(' ');
+      Logger.log('     no match: ' + guides[i] + ' (tried full="' + guides[i].toLowerCase() +
+                 '", last="' + p[p.length - 1] + '", first="' + p[0] + '")');
+    }
+    return ['UNASSIGNED'];
   }
-  return 'UNASSIGNED';
+  if (result.length > 1) {
+    Logger.log('   MULTI-GUIDE MATCH: ' + result.join(', '));
+  }
+  return result;
 }
 
 function calculateMetrics(matched, guides, gmapsWeek, taWeek) {
@@ -373,22 +385,34 @@ function calculateMetrics(matched, guides, gmapsWeek, taWeek) {
   matched.forEach(function(r) {
     var rating = parseInt(r.stars||r.rating||r.bubbleRating||0);
     var platform = r._platform;
-    var guide = r.assignedGuide||'UNASSIGNED';
+    // A review may credit multiple guides. Each one gets full credit
+    // (count, 5-star tally, and bonus). To split bonuses instead, divide
+    // bonusAmount by assignedGuides.length below.
+    var assignedGuides = (r.assignedGuides && r.assignedGuides.length)
+      ? r.assignedGuides
+      : [r.assignedGuide || 'UNASSIGNED'];
+    var bonusAmount = (platform === 'gmaps' ? 10 : 5);
 
-    if (!stats[guide]) stats[guide]={name:guide,gmaps:0,ta:0,fiveStar:0,bonus:0};
+    assignedGuides.forEach(function(guide) {
+      if (!stats[guide]) stats[guide]={name:guide,gmaps:0,ta:0,fiveStar:0,bonus:0};
+      if (platform==='gmaps') stats[guide].gmaps++;
+      else stats[guide].ta++;
+      if (rating === 5) {
+        stats[guide].fiveStar++;
+        stats[guide].bonus += bonusAmount;
+      }
+    });
 
-    if (platform==='gmaps') stats[guide].gmaps++;
-    else stats[guide].ta++;
-
-    if (rating === 5) {
-      stats[guide].fiveStar++;
-      totalFiveStar++;
-      var bonusAmount = (platform === 'gmaps' ? 10 : 5);
-      stats[guide].bonus += bonusAmount;
-    }
+    // totalFiveStar counts reviews, not per-guide credits.
+    if (rating === 5) totalFiveStar++;
 
     if (rating >= 1 && rating <= 2) {
-      lowRating.push({guide:guide, rating:rating, platform:platform, text:r.text||r.reviewText||''});
+      lowRating.push({
+        guide: assignedGuides.join(', '),
+        rating: rating,
+        platform: platform,
+        text: r.text||r.reviewText||''
+      });
     }
   });
 
