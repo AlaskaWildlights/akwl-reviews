@@ -228,14 +228,18 @@
   <footer>Alaska Wild Lights Reviews Dashboard</footer>
 
   <script>
-    // GitHub raw content URL for data.json
-    const DATA_URL = 'https://raw.githubusercontent.com/AlaskaWildlights/akwl-reviews/main/data.json';
+    // Fetch data.json from the same origin (GitHub Pages serves it from the
+    // repo root). Bypasses raw.githubusercontent.com CDN cache that can lag
+    // 5+ minutes behind the latest push.
+    const DATA_URL = './data.json';
 
     let chartInstance = null;
 
     async function loadDashboard() {
       try {
-        const response = await fetch(DATA_URL);
+        // Cache-bust so neither the browser nor the GitHub Pages CDN serves
+        // a stale copy after a fresh push from the Apps Script run.
+        const response = await fetch(DATA_URL + '?t=' + Date.now(), { cache: 'no-store' });
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: Could not load data`);
         }
@@ -268,13 +272,22 @@
     function renderMetrics(data) {
       const { summary, allTime } = data;
 
+      // Null-guard: older data.json payloads only have allTime.combined.{count,avg};
+      // newer ones add averageRating/totalReviews aliases. Fall back to combined.
+      const allTimeAvg = (allTime && allTime.averageRating)
+        ? allTime.averageRating
+        : (allTime && allTime.combined && allTime.combined.avg) ? allTime.combined.avg : 'N/A';
+      const allTimeCount = (allTime && allTime.totalReviews)
+        ? allTime.totalReviews
+        : (allTime && allTime.combined && allTime.combined.count) ? allTime.combined.count : '?';
+
       const metrics = [
         { value: summary.totalReviews, label: 'Total Reviews' },
         { value: summary.gmapsAvg + '★', label: 'Google Maps Avg' },
         { value: summary.taAvg + '★', label: 'TripAdvisor Avg' },
         { value: summary.combinedAvg + '★', label: 'Combined Avg' },
         { value: '$' + summary.totalBonus, label: 'Total Bonuses' },
-        { value: allTime.averageRating + '★', label: `All-Time Avg (${allTime.totalReviews} reviews)`, special: true }
+        { value: allTimeAvg + '★', label: `All-Time Avg (${allTimeCount} reviews)`, special: true }
       ];
 
       const html = metrics.map((m) => {
@@ -415,7 +428,9 @@
     }
 
     function escapeHtml(text) {
-      if (!text) return '';
+      // Treat null/undefined as empty, but preserve numeric 0 (otherwise
+      // "0 reviews" / "$0" / "0★" render as blank).
+      if (text === null || text === undefined) return '';
       const map = {
         '&': '&amp;',
         '<': '&lt;',
