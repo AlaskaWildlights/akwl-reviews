@@ -239,6 +239,138 @@ function bootstrap_SeedDriveFromDataJson() {
   Logger.log('✅ Drive seeded with initial data.json. Run runWeeklyReport normally from here.');
 }
 
+// Run once to backfill all of May 2026 into the Drive file. Scrapes ~100
+// reviews per platform via Apify, filters to May 2026, buckets by Sun–Sat
+// week, and adds each completed week as a weekly entry. Then rebuilds
+// monthly + byGuide. Safe to re-run — weekly entries are deduped by label.
+// REQUIRES bootstrap_SeedDriveFromDataJson to have run first (so Jan–Apr
+// historical data is in Drive and won't be lost).
+function bootstrap_SeedMonthlyMay2026() {
+  var C = getConfig();
+  Logger.log('');
+  Logger.log('╔════════════════════════════════════════════╗');
+  Logger.log('║   BOOTSTRAP: Seed May 2026 from Apify     ║');
+  Logger.log('╚════════════════════════════════════════════╝');
+  Logger.log('');
+
+  var prior = readDashboardDataFromDrive();
+  if (!prior) {
+    Logger.log('✗ No Drive file found. Run bootstrap_SeedDriveFromDataJson() first.');
+    return;
+  }
+
+  Logger.log('👥 Loading guides...');
+  var guides = fetchGuideList(C);
+  Logger.log('   ✓ ' + guides.length + ' guides');
+
+  Logger.log('📡 Fetching reviews from Apify (100 per platform)...');
+  var gmapsAll = fetchApifyReviews('gmaps', C, 100);
+  Logger.log('   ✓ Google Maps: ' + gmapsAll.length);
+  var taAll = fetchApifyReviews('tripadvisor', C, 100);
+  Logger.log('   ✓ TripAdvisor: ' + taAll.length);
+
+  // Filter to May 2026
+  function getDateStr(r) {
+    var raw = r.publishedAtDate || r.publishedDate || r.date || r.reviewDate || r.time;
+    if (!raw) return null;
+    var d = new Date(raw);
+    if (isNaN(d.getTime())) return null;
+    return Utilities.formatDate(d, TZ, 'yyyy-MM-dd');
+  }
+  function inMay2026(r) {
+    var s = getDateStr(r);
+    return s && s >= '2026-05-01' && s <= '2026-05-31';
+  }
+  var gmapsMay = gmapsAll.filter(inMay2026);
+  var taMay = taAll.filter(inMay2026);
+  Logger.log('🔍 May 2026 filter: ' + gmapsMay.length + ' GMaps, ' + taMay.length + ' TA');
+
+  // Group by Sunday-start week
+  function weekStartFor(dateStr) {
+    var parts = dateStr.split('-');
+    var d = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])));
+    var dow = d.getUTCDay(); // 0=Sun
+    d.setUTCDate(d.getUTCDate() - dow);
+    var mo = ('0'+(d.getUTCMonth()+1)).slice(-2);
+    var dy = ('0'+d.getUTCDate()).slice(-2);
+    return d.getUTCFullYear() + '-' + mo + '-' + dy;
+  }
+  function addDays(dateStr, n) {
+    var parts = dateStr.split('-');
+    var d = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])));
+    d.setUTCDate(d.getUTCDate() + n);
+    var mo = ('0'+(d.getUTCMonth()+1)).slice(-2);
+    var dy = ('0'+d.getUTCDate()).slice(-2);
+    return d.getUTCFullYear() + '-' + mo + '-' + dy;
+  }
+  function makeLabel(start, end) {
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var sp = start.split('-'), ep = end.split('-');
+    return months[parseInt(sp[1])-1]+' '+parseInt(sp[2])+' – '+months[parseInt(ep[1])-1]+' '+parseInt(ep[2])+', '+ep[0];
+  }
+
+  gmapsMay.forEach(function(r) { r._platform = 'gmaps'; });
+  taMay.forEach(function(r) { r._platform = 'tripadvisor'; });
+
+  var weeks = {};
+  function bucket(r) {
+    var ds = getDateStr(r);
+    if (!ds) return;
+    var ws = weekStartFor(ds);
+    if (!weeks[ws]) weeks[ws] = { gmaps: [], ta: [] };
+    if (r._platform === 'gmaps') weeks[ws].gmaps.push(r);
+    else weeks[ws].ta.push(r);
+  }
+  gmapsMay.forEach(bucket);
+  taMay.forEach(bucket);
+
+  // Only keep completed weeks (Sun–Sat fully in the past)
+  var todayStr = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  prior.history = prior.history || { monthly: [], weekly: [], byGuide: [] };
+  prior.history.weekly = prior.history.weekly || [];
+
+  Object.keys(weeks).sort().forEach(function(ws) {
+    var we = addDays(ws, 6);
+    if (we >= todayStr) {
+      Logger.log('   Skipping in-progress week ' + ws + ' – ' + we);
+      return;
+    }
+    var label = makeLabel(ws, we);
+    var b = weeks[ws];
+    var allReviews = b.gmaps.concat(b.ta);
+    var matched = matchReviewsToGuides(allReviews, guides);
+    var metrics = calculateMetrics(matched, guides, b.gmaps, b.ta);
+
+    var weeklyEntry = {
+      weekLabel: label,
+      startDate: ws,
+      endDate: we,
+      timestamp: new Date().toISOString(),
+      platforms: {
+        googleMaps:  { count: metrics.gmapsCount, avg: parseFloat(metrics.gmapsAvg) || 0, fiveStar: 0 },
+        tripAdvisor: { count: metrics.taCount,    avg: parseFloat(metrics.taAvg)    || 0, fiveStar: 0 }
+      },
+      totalReviews: metrics.combinedCount,
+      totalBonus: metrics.totalBonus,
+      guides: metrics.guideStats.filter(function(g) { return g.name !== 'UNASSIGNED'; })
+    };
+    var wIdx = prior.history.weekly.findIndex(function(w) { return w.weekLabel === label; });
+    if (wIdx >= 0) prior.history.weekly[wIdx] = weeklyEntry;
+    else prior.history.weekly.push(weeklyEntry);
+    Logger.log('   Week ' + label + ': ' + metrics.gmapsCount + ' GMaps (' + metrics.gmapsAvg + '★), ' + metrics.taCount + ' TA (' + metrics.taAvg + '★)');
+  });
+
+  // Rebuild monthly + byGuide from the new weekly set
+  rebuildHistoryAggregates(prior.history, prior.history.monthly);
+
+  // Update generatedAt + weekLabel for the dashboard
+  prior.generatedAt = new Date().toISOString();
+
+  writeDashboardDataToDrive(JSON.stringify(prior, null, 2));
+  Logger.log('');
+  Logger.log('✅ May 2026 seeded. Drive file updated. Download via the email link the next time runWeeklyReport runs, or trigger a manual run now.');
+}
+
 // ============================================================
 // MAIN PRODUCTION FUNCTION
 // ============================================================
@@ -847,6 +979,92 @@ function getActiveGuides() {
   ];
 }
 
+// Rebuilds history.monthly and history.byGuide from history.weekly. Historical
+// monthly entries (months with no weekly data, e.g. Jan–Apr seeded from
+// data.json) are preserved from priorMonthly. Mutates history in place.
+// Idempotent — safe to call multiple times.
+function rebuildHistoryAggregates(history, priorMonthly) {
+  priorMonthly = priorMonthly || [];
+  history.weekly = history.weekly || [];
+
+  function blankPlatformEntry() {
+    return { count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} };
+  }
+
+  // Which months are covered by weekly data
+  var weeklyMonths = {};
+  history.weekly.forEach(function(w) {
+    if (w.endDate) weeklyMonths[w.endDate.substring(0, 7)] = true;
+  });
+
+  // Preserve historical months not covered by any weekly entry
+  var historicalMonthly = priorMonthly.filter(function(m) { return !weeklyMonths[m.month]; });
+
+  // Rebuild monthly from weekly (Google Maps + TripAdvisor); carry over
+  // other-platform data (GetYourGuide, Civitatis, etc.) from prior month entry.
+  var computedMonthly = {};
+  history.weekly.forEach(function(w) {
+    var ym = w.endDate ? w.endDate.substring(0, 7) : null;
+    if (!ym) return;
+    if (!computedMonthly[ym]) {
+      var priorMonth = priorMonthly.filter(function(m) { return m.month === ym; })[0] || null;
+      computedMonthly[ym] = {
+        month: ym,
+        platforms: {
+          tripAdvisor:  blankPlatformEntry(),
+          googleMaps:   blankPlatformEntry(),
+          getYourGuide: priorMonth && priorMonth.platforms && priorMonth.platforms.getYourGuide ? JSON.parse(JSON.stringify(priorMonth.platforms.getYourGuide)) : blankPlatformEntry(),
+          civitatis:    priorMonth && priorMonth.platforms && priorMonth.platforms.civitatis    ? JSON.parse(JSON.stringify(priorMonth.platforms.civitatis))    : blankPlatformEntry(),
+          expedia:      priorMonth && priorMonth.platforms && priorMonth.platforms.expedia      ? JSON.parse(JSON.stringify(priorMonth.platforms.expedia))      : blankPlatformEntry(),
+          atmosRewards: priorMonth && priorMonth.platforms && priorMonth.platforms.atmosRewards ? JSON.parse(JSON.stringify(priorMonth.platforms.atmosRewards)) : blankPlatformEntry(),
+          bookingCom:   priorMonth && priorMonth.platforms && priorMonth.platforms.bookingCom   ? JSON.parse(JSON.stringify(priorMonth.platforms.bookingCom))   : blankPlatformEntry()
+        },
+        totalReviews: 0, totalStars: 0, combinedAvg: null, totalBonus: 0
+      };
+    }
+    var mc = computedMonthly[ym];
+    var gmCount = w.platforms.googleMaps.count || 0;
+    var gmStars = (w.platforms.googleMaps.avg || 0) * gmCount;
+    var taCount = w.platforms.tripAdvisor.count || 0;
+    var taStars = (w.platforms.tripAdvisor.avg || 0) * taCount;
+    mc.platforms.googleMaps.count += gmCount;
+    mc.platforms.googleMaps.stars += gmStars;
+    mc.platforms.googleMaps.fiveStar += w.platforms.googleMaps.fiveStar || 0;
+    mc.platforms.tripAdvisor.count += taCount;
+    mc.platforms.tripAdvisor.stars += taStars;
+    mc.platforms.tripAdvisor.fiveStar += w.platforms.tripAdvisor.fiveStar || 0;
+    mc.totalReviews += w.totalReviews || 0;
+    mc.totalStars += gmStars + taStars;
+    mc.totalBonus += w.totalBonus || 0;
+  });
+  Object.keys(computedMonthly).forEach(function(ym) {
+    var mc = computedMonthly[ym];
+    mc.platforms.googleMaps.avg = mc.platforms.googleMaps.count > 0 ? parseFloat((mc.platforms.googleMaps.stars / mc.platforms.googleMaps.count).toFixed(2)) : null;
+    mc.platforms.tripAdvisor.avg = mc.platforms.tripAdvisor.count > 0 ? parseFloat((mc.platforms.tripAdvisor.stars / mc.platforms.tripAdvisor.count).toFixed(2)) : null;
+    mc.combinedAvg = mc.totalReviews > 0 ? parseFloat((mc.totalStars / mc.totalReviews).toFixed(2)) : null;
+  });
+  history.monthly = historicalMonthly.concat(Object.keys(computedMonthly).map(function(k) { return computedMonthly[k]; }));
+  history.monthly.sort(function(a, b) { return a.month < b.month ? -1 : 1; });
+
+  // Rebuild byGuide from weekly entries
+  history.byGuide = [];
+  var byGuideMap = {};
+  history.weekly.forEach(function(w) {
+    var ym = w.endDate ? w.endDate.substring(0, 7) : null;
+    (w.guides || []).forEach(function(g) {
+      if (!byGuideMap[g.name]) {
+        byGuideMap[g.name] = { name: g.name, active: true, ytdFiveStar: 0, ytdBonus: 0, monthlyFiveStar: {} };
+        history.byGuide.push(byGuideMap[g.name]);
+      }
+      byGuideMap[g.name].ytdFiveStar += g.fiveStar || 0;
+      byGuideMap[g.name].ytdBonus += g.bonus || 0;
+      if (ym && g.fiveStar > 0) {
+        byGuideMap[g.name].monthlyFiveStar[ym] = (byGuideMap[g.name].monthlyFiveStar[ym] || 0) + (g.fiveStar || 0);
+      }
+    });
+  });
+}
+
 // Reads the latest dashboard data.json from Drive. Returns null if not set.
 function readDashboardDataFromDrive() {
   var fileId = PropertiesService.getScriptProperties().getProperty('DRIVE_FILE_ID');
@@ -937,81 +1155,8 @@ function buildDashboardJSON(metrics, runningState, win, C) {
   if (wIdx >= 0) history.weekly[wIdx] = weeklyEntry;
   else history.weekly.push(weeklyEntry);
 
-  // Rebuild history.monthly from all weekly entries — idempotent, safe to re-run
-  // the same week. Historical months with no weekly data (e.g. Jan–Apr seeded
-  // from data.json) are preserved intact.
-  var weeklyMonths = {};
-  history.weekly.forEach(function(w) {
-    if (w.endDate) weeklyMonths[w.endDate.substring(0, 7)] = true;
-  });
-
-  var historicalMonthly = (prior.history && prior.history.monthly ? prior.history.monthly : []).filter(function(m) {
-    return !weeklyMonths[m.month];
-  });
-
-  function blankPlatformEntry() {
-    return { count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} };
-  }
-
-  var computedMonthly = {};
-  history.weekly.forEach(function(w) {
-    var ym = w.endDate ? w.endDate.substring(0, 7) : null;
-    if (!ym) return;
-    if (!computedMonthly[ym]) {
-      var priorMonth = (prior.history && prior.history.monthly ? prior.history.monthly : []).filter(function(m) { return m.month === ym; })[0] || null;
-      computedMonthly[ym] = {
-        month: ym,
-        platforms: {
-          tripAdvisor:  blankPlatformEntry(),
-          googleMaps:   blankPlatformEntry(),
-          getYourGuide: priorMonth && priorMonth.platforms.getYourGuide ? JSON.parse(JSON.stringify(priorMonth.platforms.getYourGuide)) : blankPlatformEntry(),
-          civitatis:    priorMonth && priorMonth.platforms.civitatis    ? JSON.parse(JSON.stringify(priorMonth.platforms.civitatis))    : blankPlatformEntry(),
-          expedia:      priorMonth && priorMonth.platforms.expedia      ? JSON.parse(JSON.stringify(priorMonth.platforms.expedia))      : blankPlatformEntry(),
-          atmosRewards: priorMonth && priorMonth.platforms.atmosRewards ? JSON.parse(JSON.stringify(priorMonth.platforms.atmosRewards)) : blankPlatformEntry(),
-          bookingCom:   priorMonth && priorMonth.platforms.bookingCom   ? JSON.parse(JSON.stringify(priorMonth.platforms.bookingCom))   : blankPlatformEntry()
-        },
-        totalReviews: 0, totalStars: 0, combinedAvg: null, totalBonus: 0
-      };
-    }
-    var mc = computedMonthly[ym];
-    var gmCount = w.platforms.googleMaps.count || 0;
-    var gmStars = (w.platforms.googleMaps.avg || 0) * gmCount;
-    var taCount = w.platforms.tripAdvisor.count || 0;
-    var taStars = (w.platforms.tripAdvisor.avg || 0) * taCount;
-    mc.platforms.googleMaps.count += gmCount;
-    mc.platforms.googleMaps.stars += gmStars;
-    mc.platforms.tripAdvisor.count += taCount;
-    mc.platforms.tripAdvisor.stars += taStars;
-    mc.totalReviews += w.totalReviews || 0;
-    mc.totalStars += gmStars + taStars;
-    mc.totalBonus += w.totalBonus || 0;
-  });
-  Object.keys(computedMonthly).forEach(function(ym) {
-    var mc = computedMonthly[ym];
-    mc.platforms.googleMaps.avg = mc.platforms.googleMaps.count > 0 ? parseFloat((mc.platforms.googleMaps.stars / mc.platforms.googleMaps.count).toFixed(2)) : null;
-    mc.platforms.tripAdvisor.avg = mc.platforms.tripAdvisor.count > 0 ? parseFloat((mc.platforms.tripAdvisor.stars / mc.platforms.tripAdvisor.count).toFixed(2)) : null;
-    mc.combinedAvg = mc.totalReviews > 0 ? parseFloat((mc.totalStars / mc.totalReviews).toFixed(2)) : null;
-  });
-  history.monthly = historicalMonthly.concat(Object.keys(computedMonthly).map(function(k) { return computedMonthly[k]; }));
-  history.monthly.sort(function(a, b) { return a.month < b.month ? -1 : 1; });
-
-  // Rebuild history.byGuide from all weekly entries — idempotent
-  history.byGuide = [];
-  var byGuideMap = {};
-  history.weekly.forEach(function(w) {
-    var ym = w.endDate ? w.endDate.substring(0, 7) : null;
-    (w.guides || []).forEach(function(g) {
-      if (!byGuideMap[g.name]) {
-        byGuideMap[g.name] = { name: g.name, active: true, ytdFiveStar: 0, ytdBonus: 0, monthlyFiveStar: {} };
-        history.byGuide.push(byGuideMap[g.name]);
-      }
-      byGuideMap[g.name].ytdFiveStar += g.fiveStar || 0;
-      byGuideMap[g.name].ytdBonus += g.bonus || 0;
-      if (ym && g.fiveStar > 0) {
-        byGuideMap[g.name].monthlyFiveStar[ym] = (byGuideMap[g.name].monthlyFiveStar[ym] || 0) + (g.fiveStar || 0);
-      }
-    });
-  });
+  // Rebuild history.monthly + history.byGuide from history.weekly (idempotent).
+  rebuildHistoryAggregates(history, prior.history && prior.history.monthly ? prior.history.monthly : []);
 
   // Build YTD platform totals from history.monthly
   var ytdPlat = {
@@ -1234,25 +1379,6 @@ function createEmailDraftHTML(metrics, runningState, weekLabel, C) {
   GmailApp.createDraft(C.EMAIL_TO, subject, plainFallback, {
     cc: C.EMAIL_CC,
     htmlBody: html,
-    name: 'Alaska Wild Lights Reviews'
-  });
-
-  // Preview copy: send the rendered HTML ONLY to ALERT_EMAIL (awlsaray@) so
-  // the format can be verified each week without spamming the team. Prepend
-  // a banner reminding NOT to forward this preview — forwarding strips HTML.
-  // Instead, Saray opens Gmail Drafts and clicks Send on the team draft.
-  var previewBanner =
-    '<div style="background:#fff3cd;border:2px solid #ffc107;padding:14px 18px;' +
-    'margin:0 0 18px 0;border-radius:6px;color:#5d4400;font-family:Arial,sans-serif;font-size:13px;line-height:1.5">' +
-    '<strong>⚠️ ESTE ES UN PREVIEW. NO USES "REENVIAR/FORWARD".</strong><br>' +
-    'Gmail rompe el HTML cuando se reenvía. Para enviar al equipo:<br>' +
-    '<strong>1.</strong> Abre Gmail → <strong>Borradores (Drafts)</strong><br>' +
-    '<strong>2.</strong> Abre el draft <em>"' + escapeHtmlGs(subject) + '"</em> (sin el [PREVIEW])<br>' +
-    '<strong>3.</strong> Click <strong>Enviar</strong> — el equipo recibe el HTML intacto.' +
-    '</div>';
-  var htmlForPreview = html.replace('<div class="container">', '<div class="container">' + previewBanner);
-  GmailApp.sendEmail(C.ALERT_EMAIL, '[PREVIEW] ' + subject, plainFallback, {
-    htmlBody: htmlForPreview,
     name: 'Alaska Wild Lights Reviews'
   });
 }
