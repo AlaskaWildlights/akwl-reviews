@@ -239,6 +239,95 @@ function bootstrap_SeedDriveFromDataJson() {
   Logger.log('✅ Drive seeded with initial data.json. Run runWeeklyReport normally from here.');
 }
 
+// ============================================================
+// MANUAL WEEK ENTRY — no Apify needed
+// ============================================================
+// Fill in the MANUAL CONFIG block below and run this function.
+// It reads Drive (or GitHub baseline if Drive is empty), adds
+// the week you specify, rebuilds aggregates, saves to Drive,
+// and emails you the JSON. Zero Apify cost.
+//
+// Use case: fixing a missed week, seeding known data, or any
+// week where you don't want to spend Apify credits.
+// ============================================================
+function util_AddManualWeek() {
+  // ── MANUAL CONFIG ─────────────────────────────────────────
+  var WEEK_LABEL  = 'May 10 – May 16, 2026'; // shown in dashboard
+  var START_DATE  = '2026-05-11';             // Sunday (yyyy-MM-dd)
+  var END_DATE    = '2026-05-17';             // Saturday
+  var GMAPS_COUNT    = 1;
+  var GMAPS_FIVESTAR = 1;  // how many of those were 5★
+  var TA_COUNT       = 1;
+  var TA_FIVESTAR    = 0;  // how many of those were 5★
+  // Guide breakdown — only list guides who got reviews.
+  // Fields: name (must match activeGuides), gmaps, ta, fiveStar, bonus
+  var GUIDE_DATA = [
+    { name: 'Jodi Bailey',    gmaps: 1, ta: 0, fiveStar: 1, bonus: 10 },
+    { name: 'RIpley Caldwell', gmaps: 0, ta: 0, fiveStar: 0, bonus: 0  }
+    // Add more rows as needed
+  ];
+  // ── END CONFIG ────────────────────────────────────────────
+
+  var C = getConfig();
+  Logger.log('');
+  Logger.log('╔════════════════════════════════════════════╗');
+  Logger.log('║   util_AddManualWeek: ' + WEEK_LABEL.substring(0, 19) + '  ║');
+  Logger.log('╚════════════════════════════════════════════╝');
+
+  // Load existing Drive data (or GitHub baseline as fallback)
+  var prior = readDashboardDataFromDrive();
+  if (!prior || !prior.history) {
+    Logger.log('📡 Drive empty — loading GitHub baseline...');
+    var baselineUrl = 'https://raw.githubusercontent.com/' + C.GITHUB_USERNAME + '/' + C.GITHUB_REPO + '/main/data.json';
+    var resp = fetchWithRetry(baselineUrl, { muteHttpExceptions: true });
+    prior = (resp.getResponseCode() === 200) ? JSON.parse(resp.getContentText()) : {};
+  } else {
+    Logger.log('✓ Loaded from Drive (' + (prior.history.weekly || []).length + ' weekly entries)');
+  }
+
+  prior.history = prior.history || { monthly: [], weekly: [], byGuide: [] };
+  prior.history.weekly = prior.history.weekly || [];
+
+  var entry = {
+    weekLabel: WEEK_LABEL,
+    startDate: START_DATE,
+    endDate:   END_DATE,
+    timestamp: new Date().toISOString(),
+    platforms: {
+      googleMaps:  { count: GMAPS_COUNT, avg: GMAPS_COUNT > 0 ? (GMAPS_FIVESTAR * 5 / GMAPS_COUNT) : 0, fiveStar: GMAPS_FIVESTAR },
+      tripAdvisor: { count: TA_COUNT,    avg: TA_COUNT    > 0 ? (TA_FIVESTAR    * 5 / TA_COUNT)    : 0, fiveStar: TA_FIVESTAR    }
+    },
+    totalReviews: GMAPS_COUNT + TA_COUNT,
+    totalBonus:   GMAPS_FIVESTAR * 10 + TA_FIVESTAR * 5,
+    guides: GUIDE_DATA
+  };
+
+  var idx = prior.history.weekly.findIndex(function(w) { return w.weekLabel === WEEK_LABEL; });
+  if (idx >= 0) { prior.history.weekly[idx] = entry; Logger.log('   Replaced existing entry for ' + WEEK_LABEL); }
+  else          { prior.history.weekly.push(entry);   Logger.log('   Added new entry for ' + WEEK_LABEL); }
+
+  rebuildHistoryAggregates(prior.history, prior.history.monthly);
+  prior.generatedAt = new Date().toISOString();
+
+  var finalJson = JSON.stringify(prior, null, 2);
+  var driveId = writeDashboardDataToDrive(finalJson);
+  Logger.log('✓ Saved to Drive');
+
+  var blob = Utilities.newBlob(finalJson, 'application/json', 'akwl-reviews-data.json');
+  MailApp.sendEmail({
+    to: C.EMAIL_TO,
+    subject: 'AKWL Reviews — Semana manual agregada: ' + WEEK_LABEL,
+    body: 'Semana agregada manualmente.\n\nSemana: ' + WEEK_LABEL +
+          '\nGoogle Maps: ' + GMAPS_COUNT + ' reviews (' + GMAPS_FIVESTAR + ' de 5★)' +
+          '\nTripAdvisor: ' + TA_COUNT    + ' reviews (' + TA_FIVESTAR    + ' de 5★)' +
+          '\n\nAdjunto el akwl-reviews-data.json completo. Subilo al dashboard.',
+    attachments: [blob],
+    name: 'Alaska Wild Lights Reviews'
+  });
+  Logger.log('📧 Emailed to ' + C.EMAIL_TO);
+  Logger.log('✅ Done. Upload the attached JSON to the Netlify dashboard.');
+}
+
 // Run once to backfill all of May 2026 into the Drive file. Scrapes ~100
 // reviews per platform via Apify, filters to May 2026, buckets by Sun–Sat
 // week, and adds each completed week as a weekly entry. Then rebuilds
