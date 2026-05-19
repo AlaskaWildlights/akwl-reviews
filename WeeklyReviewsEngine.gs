@@ -215,6 +215,30 @@ function bootstrap_Initialize6MonthHistory() {
   Logger.log('✅ Bootstrap complete.');
 }
 
+// Run once to seed the Drive file from data.json in the GitHub repo.
+// This preserves Jan–Apr history when the weekly script runs for the first time.
+// Safe to skip if the Drive file already exists.
+function bootstrap_SeedDriveFromDataJson() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('DRIVE_FILE_ID')) {
+    Logger.log('⚠️  DRIVE_FILE_ID already set — Drive file exists. Skipping seed to avoid overwriting live data.');
+    Logger.log('   Delete DRIVE_FILE_ID from Script Properties first if you want to re-seed.');
+    return;
+  }
+  var C = getConfig();
+  var url = 'https://raw.githubusercontent.com/' + C.GITHUB_USERNAME + '/' + C.GITHUB_REPO + '/main/data.json';
+  Logger.log('📡 Fetching data.json from GitHub...');
+  var resp = fetchWithRetry(url, { muteHttpExceptions: true });
+  if (resp.getResponseCode() !== 200) {
+    Logger.log('✗ Could not fetch data.json: HTTP ' + resp.getResponseCode());
+    return;
+  }
+  var initialData = JSON.parse(resp.getContentText());
+  Logger.log('   ✓ Loaded data.json (' + (initialData.history && initialData.history.monthly ? initialData.history.monthly.length : 0) + ' monthly entries)');
+  writeDashboardDataToDrive(JSON.stringify(initialData, null, 2));
+  Logger.log('✅ Drive seeded with initial data.json. Run runWeeklyReport normally from here.');
+}
+
 // ============================================================
 // MAIN PRODUCTION FUNCTION
 // ============================================================
@@ -352,14 +376,14 @@ function runWeeklyReport() {
 
     Logger.log('📊 Building dashboard data.json with accumulated history...');
     var dashboardJSON = buildDashboardJSON(metrics, running, win, C);
-    writeDashboardDataToDrive(dashboardJSON);
+    var driveFileId = writeDashboardDataToDrive(dashboardJSON);
     Logger.log('   ✓ Saved to Drive');
     Logger.log('');
 
-    Logger.log('📧 Emailing dashboard JSON + team draft...');
-    emailDashboardJSON(dashboardJSON, win.weekLabel, C);
+    Logger.log('📧 Emailing dashboard JSON link + team draft...');
+    emailDashboardJSON(win.weekLabel, driveFileId, C);
     createEmailDraftHTML(metrics, running, win.weekLabel, C);
-    Logger.log('   ✓ Dashboard JSON emailed + team draft created');
+    Logger.log('   ✓ Dashboard JSON link emailed + team draft created');
     Logger.log('');
 
     // -------- Everything above succeeded. Persist state LAST so a partial
@@ -836,8 +860,17 @@ function readDashboardDataFromDrive() {
   }
 }
 
-// Writes the dashboard data.json to Drive. Creates the file on first call,
-// saves the ID to Script Properties for future reads.
+// Returns the "AKWL Reviews Dashboard" Drive folder, creating it if needed.
+function getOrCreateDashboardFolder() {
+  var name = 'AKWL Reviews Dashboard';
+  var folders = DriveApp.getFoldersByName(name);
+  if (folders.hasNext()) return folders.next();
+  return DriveApp.createFolder(name);
+}
+
+// Writes the dashboard data.json to Drive inside the "AKWL Reviews Dashboard"
+// folder. Creates the file on first call and saves the ID to Script Properties.
+// Sets sharing to "anyone with link" so the emailed download link works directly.
 function writeDashboardDataToDrive(jsonContent) {
   var props = PropertiesService.getScriptProperties();
   var fileId = props.getProperty('DRIVE_FILE_ID');
@@ -847,14 +880,17 @@ function writeDashboardDataToDrive(jsonContent) {
     try {
       var file = DriveApp.getFileById(fileId);
       file.setContent(jsonContent);
+      try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(e) {}
       return fileId;
     } catch (e) {
       Logger.log('   ⚠  Stale Drive file ID, creating new: ' + e.message);
     }
   }
-  var newFile = DriveApp.createFile(blob);
+  var folder = getOrCreateDashboardFolder();
+  var newFile = folder.createFile(blob);
+  newFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   props.setProperty('DRIVE_FILE_ID', newFile.getId());
-  Logger.log('   ✓ Created Drive file: ' + newFile.getId());
+  Logger.log('   ✓ Created Drive file in "AKWL Reviews Dashboard" folder: ' + newFile.getId());
   return newFile.getId();
 }
 
@@ -895,67 +931,86 @@ function buildDashboardJSON(metrics, runningState, win, C) {
       tripAdvisor: { count: metrics.taCount, avg: parseFloat(metrics.taAvg) || 0, fiveStar: 0 }
     },
     totalReviews: metrics.combinedCount,
-    totalBonus: metrics.totalBonus
+    totalBonus: metrics.totalBonus,
+    guides: metrics.guideStats.filter(function(g) { return g.name !== 'UNASSIGNED'; })
   };
-  // Count 5★ per platform this week
-  metrics.guideStats.forEach(function(g) {
-    // (5★ count per platform isn't directly tracked; using guide totals is approx.)
-  });
   if (wIdx >= 0) history.weekly[wIdx] = weeklyEntry;
   else history.weekly.push(weeklyEntry);
 
-  // Update history.monthly for current month
-  var ym = win.endDateStr.substring(0, 7); // YYYY-MM
-  history.monthly = history.monthly || [];
-  var mIdx = history.monthly.findIndex(function(m) { return m.month === ym; });
-  if (mIdx < 0) {
-    // Create new month entry
-    history.monthly.push({
-      month: ym,
-      platforms: {
-        tripAdvisor: { count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} },
-        googleMaps:  { count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} },
-        getYourGuide:{ count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} },
-        civitatis:   { count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} },
-        expedia:     { count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} },
-        atmosRewards:{ count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} },
-        bookingCom:  { count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} }
-      },
-      totalReviews: 0, totalStars: 0, combinedAvg: null, totalBonus: 0
-    });
-    mIdx = history.monthly.length - 1;
-  }
-  var m = history.monthly[mIdx];
-  // Add this week's gmaps/ta to month bucket
-  var gmStars = (parseFloat(metrics.gmapsAvg) || 0) * metrics.gmapsCount;
-  var taStars = (parseFloat(metrics.taAvg) || 0) * metrics.taCount;
-  m.platforms.googleMaps.count += metrics.gmapsCount;
-  m.platforms.googleMaps.stars += gmStars;
-  m.platforms.googleMaps.avg = m.platforms.googleMaps.count > 0 ? parseFloat((m.platforms.googleMaps.stars / m.platforms.googleMaps.count).toFixed(2)) : null;
-  m.platforms.tripAdvisor.count += metrics.taCount;
-  m.platforms.tripAdvisor.stars += taStars;
-  m.platforms.tripAdvisor.avg = m.platforms.tripAdvisor.count > 0 ? parseFloat((m.platforms.tripAdvisor.stars / m.platforms.tripAdvisor.count).toFixed(2)) : null;
-  m.totalReviews += metrics.combinedCount;
-  m.totalStars += gmStars + taStars;
-  m.combinedAvg = m.totalReviews > 0 ? parseFloat((m.totalStars / m.totalReviews).toFixed(2)) : null;
-  m.totalBonus += metrics.totalBonus;
+  // Rebuild history.monthly from all weekly entries — idempotent, safe to re-run
+  // the same week. Historical months with no weekly data (e.g. Jan–Apr seeded
+  // from data.json) are preserved intact.
+  var weeklyMonths = {};
+  history.weekly.forEach(function(w) {
+    if (w.endDate) weeklyMonths[w.endDate.substring(0, 7)] = true;
+  });
 
-  // Update history.byGuide (YTD 5★ + bonus per guide)
-  history.byGuide = history.byGuide || [];
+  var historicalMonthly = (prior.history && prior.history.monthly ? prior.history.monthly : []).filter(function(m) {
+    return !weeklyMonths[m.month];
+  });
+
+  function blankPlatformEntry() {
+    return { count: 0, stars: 0, fiveStar: 0, avg: null, breakdown: {'5':0,'4':0,'3':0,'2':0,'1':0} };
+  }
+
+  var computedMonthly = {};
+  history.weekly.forEach(function(w) {
+    var ym = w.endDate ? w.endDate.substring(0, 7) : null;
+    if (!ym) return;
+    if (!computedMonthly[ym]) {
+      var priorMonth = (prior.history && prior.history.monthly ? prior.history.monthly : []).filter(function(m) { return m.month === ym; })[0] || null;
+      computedMonthly[ym] = {
+        month: ym,
+        platforms: {
+          tripAdvisor:  blankPlatformEntry(),
+          googleMaps:   blankPlatformEntry(),
+          getYourGuide: priorMonth && priorMonth.platforms.getYourGuide ? JSON.parse(JSON.stringify(priorMonth.platforms.getYourGuide)) : blankPlatformEntry(),
+          civitatis:    priorMonth && priorMonth.platforms.civitatis    ? JSON.parse(JSON.stringify(priorMonth.platforms.civitatis))    : blankPlatformEntry(),
+          expedia:      priorMonth && priorMonth.platforms.expedia      ? JSON.parse(JSON.stringify(priorMonth.platforms.expedia))      : blankPlatformEntry(),
+          atmosRewards: priorMonth && priorMonth.platforms.atmosRewards ? JSON.parse(JSON.stringify(priorMonth.platforms.atmosRewards)) : blankPlatformEntry(),
+          bookingCom:   priorMonth && priorMonth.platforms.bookingCom   ? JSON.parse(JSON.stringify(priorMonth.platforms.bookingCom))   : blankPlatformEntry()
+        },
+        totalReviews: 0, totalStars: 0, combinedAvg: null, totalBonus: 0
+      };
+    }
+    var mc = computedMonthly[ym];
+    var gmCount = w.platforms.googleMaps.count || 0;
+    var gmStars = (w.platforms.googleMaps.avg || 0) * gmCount;
+    var taCount = w.platforms.tripAdvisor.count || 0;
+    var taStars = (w.platforms.tripAdvisor.avg || 0) * taCount;
+    mc.platforms.googleMaps.count += gmCount;
+    mc.platforms.googleMaps.stars += gmStars;
+    mc.platforms.tripAdvisor.count += taCount;
+    mc.platforms.tripAdvisor.stars += taStars;
+    mc.totalReviews += w.totalReviews || 0;
+    mc.totalStars += gmStars + taStars;
+    mc.totalBonus += w.totalBonus || 0;
+  });
+  Object.keys(computedMonthly).forEach(function(ym) {
+    var mc = computedMonthly[ym];
+    mc.platforms.googleMaps.avg = mc.platforms.googleMaps.count > 0 ? parseFloat((mc.platforms.googleMaps.stars / mc.platforms.googleMaps.count).toFixed(2)) : null;
+    mc.platforms.tripAdvisor.avg = mc.platforms.tripAdvisor.count > 0 ? parseFloat((mc.platforms.tripAdvisor.stars / mc.platforms.tripAdvisor.count).toFixed(2)) : null;
+    mc.combinedAvg = mc.totalReviews > 0 ? parseFloat((mc.totalStars / mc.totalReviews).toFixed(2)) : null;
+  });
+  history.monthly = historicalMonthly.concat(Object.keys(computedMonthly).map(function(k) { return computedMonthly[k]; }));
+  history.monthly.sort(function(a, b) { return a.month < b.month ? -1 : 1; });
+
+  // Rebuild history.byGuide from all weekly entries — idempotent
+  history.byGuide = [];
   var byGuideMap = {};
-  history.byGuide.forEach(function(g) { byGuideMap[g.name] = g; });
-  metrics.guideStats.forEach(function(g) {
-    if (g.name === 'UNASSIGNED') return;
-    if (!byGuideMap[g.name]) {
-      byGuideMap[g.name] = { name: g.name, active: true, ytdFiveStar: 0, ytdBonus: 0, monthlyFiveStar: {} };
-      history.byGuide.push(byGuideMap[g.name]);
-    }
-    byGuideMap[g.name].ytdFiveStar += g.fiveStar || 0;
-    byGuideMap[g.name].ytdBonus = (byGuideMap[g.name].ytdBonus || 0) + (g.bonus || 0);
-    if (g.fiveStar > 0) {
-      byGuideMap[g.name].monthlyFiveStar = byGuideMap[g.name].monthlyFiveStar || {};
-      byGuideMap[g.name].monthlyFiveStar[ym] = (byGuideMap[g.name].monthlyFiveStar[ym] || 0) + g.fiveStar;
-    }
+  history.weekly.forEach(function(w) {
+    var ym = w.endDate ? w.endDate.substring(0, 7) : null;
+    (w.guides || []).forEach(function(g) {
+      if (!byGuideMap[g.name]) {
+        byGuideMap[g.name] = { name: g.name, active: true, ytdFiveStar: 0, ytdBonus: 0, monthlyFiveStar: {} };
+        history.byGuide.push(byGuideMap[g.name]);
+      }
+      byGuideMap[g.name].ytdFiveStar += g.fiveStar || 0;
+      byGuideMap[g.name].ytdBonus += g.bonus || 0;
+      if (ym && g.fiveStar > 0) {
+        byGuideMap[g.name].monthlyFiveStar[ym] = (byGuideMap[g.name].monthlyFiveStar[ym] || 0) + (g.fiveStar || 0);
+      }
+    });
   });
 
   // Build YTD platform totals from history.monthly
@@ -1023,31 +1078,30 @@ function buildDashboardJSON(metrics, runningState, win, C) {
   return JSON.stringify(data, null, 2);
 }
 
-// Emails the dashboard data.json as an attachment.
-function emailDashboardJSON(jsonContent, weekLabel, C) {
-  var subject = 'AKWL Weekly Reviews — ' + weekLabel + ' · Dashboard data attached';
-  var filename = 'akwl-reviews-data.json';
-  var attachment = Utilities.newBlob(jsonContent, 'application/json', filename);
-
-  var dashUrl = PropertiesService.getScriptProperties().getProperty('DASHBOARD_URL') || 'https://app.netlify.com/drop';
+// Emails a download link for the dashboard data.json stored in Drive.
+function emailDashboardJSON(weekLabel, fileId, C) {
+  var subject = 'AKWL Weekly Reviews — ' + weekLabel;
+  var dashUrl = PropertiesService.getScriptProperties().getProperty('DASHBOARD_URL') || '';
+  var downloadUrl = 'https://drive.google.com/uc?export=download&id=' + fileId;
 
   var body =
     'Weekly Reviews — ' + weekLabel + '\n\n' +
-    'To update the dashboard:\n' +
-    '  1. Save the attached file (akwl-reviews-data.json)\n' +
-    '  2. Open the dashboard: ' + dashUrl + '\n' +
-    '  3. Click "↑ Upload data.json" and select the file\n' +
-    '  4. Done — your browser saves it for next time\n\n' +
-    'Generated: ' + new Date().toString();
+    'Descargá el archivo actualizado:\n' +
+    downloadUrl + '\n\n' +
+    (dashUrl ? 'Dashboard: ' + dashUrl + '\n\n' : '') +
+    'Pasos:\n' +
+    '  1. Click el link de arriba → descarga akwl-reviews-data.json\n' +
+    '  2. Abrí el dashboard\n' +
+    '  3. Click "↑ Upload data.json" → seleccioná el archivo\n\n' +
+    'Generado: ' + new Date().toString();
 
   MailApp.sendEmail({
-    to: C.ALERT_EMAIL,
+    to: C.EMAIL_TO,
     subject: subject,
     body: body,
-    attachments: [attachment],
     name: 'Alaska Wild Lights Reviews'
   });
-  Logger.log('   ✓ Dashboard JSON emailed to ' + C.ALERT_EMAIL);
+  Logger.log('   ✓ Link enviado a ' + C.EMAIL_TO);
 }
 
 function pushToGitHub(jsonContent, C) {

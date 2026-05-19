@@ -10,13 +10,13 @@ Domingo (automático):
     ├─ Scrapea Google Maps + TripAdvisor via Apify
     ├─ Acumula historia (monthly + weekly + byGuide)
     ├─ Guarda data.json en Google Drive (backend)
-    └─ Te emaila el data.json como adjunto a awlsaray@gmail.com
+    └─ Te emaila un link de descarga a info@alaskawildlights.com
 
 Vos (30 segundos):
-  1. Abrís el email con asunto "AKWL Weekly Reviews — ... · Dashboard data attached"
-  2. Descargás el adjunto akwl-reviews-data.json
+  1. Abrís el email con asunto "AKWL Weekly Reviews — ..."
+  2. Click el link de descarga en el cuerpo → descargás akwl-reviews-data.json
   3. Abrís el dashboard en Netlify (la URL pública)
-  4. Click "↑ Upload data.json" → seleccionás el archivo
+  4. Click "↑ Upload data.json" → seleccionás el archivo descargado
   5. Listo. El navegador lo guarda localmente, no tenés que hacerlo de nuevo si volvés a abrir.
 ```
 
@@ -38,9 +38,13 @@ Vos (30 segundos):
 5. Save
 
 Listo. La primera vez que corra, va a:
-- Crear el archivo `akwl-reviews-data.json` en tu Google Drive
+- Crear la carpeta `AKWL Reviews Dashboard` en tu Google Drive
+- Crear el archivo `akwl-reviews-data.json` dentro de esa carpeta
 - Guardar el ID en Script Properties (`DRIVE_FILE_ID`)
-- Emailarte el primer adjunto
+- Emailarte el link de descarga
+
+**Importante — corré esto antes del primer run semanal:**
+Ejecutá `bootstrap_SeedDriveFromDataJson()` una vez para sembrar el archivo Drive con el historial Jan–Abr. Si no lo hacés, el primer run semanal arranca sin historia previa y perderías esos datos.
 
 ## Archivos del repo
 
@@ -57,14 +61,14 @@ El `data.json` con TODA la historia acumulada vive en **tu Google Drive** (archi
 1. Lo lee de Drive
 2. Le agrega la semana actual
 3. Lo guarda devuelta en Drive
-4. Te lo emaila como adjunto
+4. Te emaila un link de descarga a `info@alaskawildlights.com`
 
 No depende de GitHub Pages (cache), no depende de servidores externos, no depende de tokens que expiren. Solo Apps Script + Drive + tu navegador.
 
 ## Si algo se rompe
 
 - **Email no llegó**: Revisá Apps Script → Executions, ver el último run
-- **Adjunto vacío**: Verificá que `DRIVE_FILE_ID` esté en Script Properties
+- **Link no funciona**: Verificá que `DRIVE_FILE_ID` esté en Script Properties y que el archivo en Drive esté compartido como "anyone with link"
 - **Dashboard muestra data vieja**: Click el botón "↺ Reset" para limpiar localStorage, luego subí el archivo nuevo
 - **Quiero re-correr la semana**: Apps Script → seleccionar `runWeeklyReport` → Run
 
