@@ -239,6 +239,48 @@ function bootstrap_SeedDriveFromDataJson() {
   Logger.log('✅ Drive seeded with initial data.json. Run runWeeklyReport normally from here.');
 }
 
+// Always overwrites Drive with the current data.json from GitHub (no guard).
+// Run this once after updating data.json in the repo to reset the Drive baseline.
+// After running, weekly reports will accumulate on top of this baseline automatically.
+function bootstrap_ForceReseedDrive() {
+  var C = getConfig();
+  Logger.log('');
+  Logger.log('╔════════════════════════════════════════════╗');
+  Logger.log('║   bootstrap_ForceReseedDrive               ║');
+  Logger.log('╚════════════════════════════════════════════╝');
+
+  var url = 'https://raw.githubusercontent.com/' + C.GITHUB_USERNAME + '/' + C.GITHUB_REPO + '/main/data.json';
+  Logger.log('📡 Fetching data.json from GitHub...');
+  var resp = fetchWithRetry(url, { muteHttpExceptions: true });
+  if (resp.getResponseCode() !== 200) {
+    Logger.log('✗ Could not fetch data.json: HTTP ' + resp.getResponseCode());
+    return;
+  }
+  var data = JSON.parse(resp.getContentText());
+  var monthly = data.history && data.history.monthly ? data.history.monthly : [];
+  var weekly  = data.history && data.history.weekly  ? data.history.weekly  : [];
+  Logger.log('   ✓ Loaded: ' + monthly.filter(function(m){return m.totalReviews>0;}).length + ' months with data, ' + weekly.length + ' weekly entries');
+
+  var driveFileId = writeDashboardDataToDrive(JSON.stringify(data, null, 2));
+  Logger.log('   ✓ Saved to Drive (file ID: ' + driveFileId + ')');
+
+  // Email the JSON so it's immediately available to upload
+  var blob = Utilities.newBlob(JSON.stringify(data, null, 2), 'application/json', 'akwl-reviews-data.json');
+  MailApp.sendEmail({
+    to: C.EMAIL_TO,
+    subject: 'AKWL Reviews — Drive reiniciado con baseline · data.json adjunto',
+    body: 'Drive reiniciado con el JSON base del repo (Jan–May 2026).\n\n' +
+          'Meses con data: ' + monthly.filter(function(m){return m.totalReviews>0;}).map(function(m){return m.month;}).join(', ') + '\n' +
+          'Semanas cargadas: ' + weekly.map(function(w){return w.weekLabel;}).join(', ') + '\n\n' +
+          'Adjunto el archivo. Subilo al dashboard si querés ver el estado actual.\n\n' +
+          'A partir de ahora runWeeklyReport va a acumular encima de esta base cada domingo.',
+    attachments: [blob],
+    name: 'Alaska Wild Lights Reviews'
+  });
+  Logger.log('📧 JSON enviado a ' + C.EMAIL_TO);
+  Logger.log('✅ Listo. El próximo runWeeklyReport acumula arriba de este baseline.');
+}
+
 // ============================================================
 // MANUAL WEEK ENTRY — no Apify needed
 // ============================================================
