@@ -253,11 +253,18 @@ function bootstrap_SeedMonthlyMay2026() {
   Logger.log('╚════════════════════════════════════════════╝');
   Logger.log('');
 
-  var prior = readDashboardDataFromDrive();
-  if (!prior) {
-    Logger.log('✗ No Drive file found. Run bootstrap_SeedDriveFromDataJson() first.');
+  // Always load Jan–Apr historical data from data.json in the GitHub repo.
+  // This guarantees the historical baseline is correct regardless of what's
+  // currently in Drive.
+  Logger.log('📡 Loading Jan–Apr baseline from data.json...');
+  var baselineUrl = 'https://raw.githubusercontent.com/' + C.GITHUB_USERNAME + '/' + C.GITHUB_REPO + '/main/data.json';
+  var baselineResp = fetchWithRetry(baselineUrl, { muteHttpExceptions: true });
+  if (baselineResp.getResponseCode() !== 200) {
+    Logger.log('✗ Could not fetch data.json from GitHub: HTTP ' + baselineResp.getResponseCode());
     return;
   }
+  var prior = JSON.parse(baselineResp.getContentText());
+  Logger.log('   ✓ Baseline loaded (' + (prior.history && prior.history.monthly ? prior.history.monthly.length : 0) + ' monthly entries)');
 
   Logger.log('👥 Loading guides...');
   var guides = fetchGuideList(C);
