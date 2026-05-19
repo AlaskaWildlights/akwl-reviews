@@ -366,9 +366,22 @@ function bootstrap_SeedMonthlyMay2026() {
   // Update generatedAt + weekLabel for the dashboard
   prior.generatedAt = new Date().toISOString();
 
-  writeDashboardDataToDrive(JSON.stringify(prior, null, 2));
+  var finalJson = JSON.stringify(prior, null, 2);
+  var driveFileId = writeDashboardDataToDrive(finalJson);
   Logger.log('');
-  Logger.log('✅ May 2026 seeded. Drive file updated. Download via the email link the next time runWeeklyReport runs, or trigger a manual run now.');
+
+  // Email the JSON directly as attachment so it's immediately available
+  var C = getConfig();
+  var attachment = Utilities.newBlob(finalJson, 'application/json', 'akwl-reviews-data.json');
+  MailApp.sendEmail({
+    to: C.EMAIL_TO,
+    subject: 'AKWL Reviews — Mayo 2026 sembrado · data.json adjunto',
+    body: 'Bootstrap completado.\n\nAdjunto el akwl-reviews-data.json con historial Ene–May.\n\nPasos:\n  1. Guardá el adjunto\n  2. Abrí el dashboard en Netlify\n  3. Click "↑ Upload data.json" → seleccioná el archivo\n\nGenerado: ' + new Date().toString(),
+    attachments: [attachment],
+    name: 'Alaska Wild Lights Reviews'
+  });
+  Logger.log('📧 JSON enviado como adjunto a ' + C.EMAIL_TO);
+  Logger.log('✅ May 2026 seeded. Subí el adjunto al dashboard.');
 }
 
 // ============================================================
