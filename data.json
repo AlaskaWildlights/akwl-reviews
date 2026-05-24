@@ -1,25 +1,25 @@
 {
-  "weekLabel": "May 10 – May 16, 2026",
-  "timestamp": "2026-05-19T03:13:02.448Z",
+  "weekLabel": "May 17 – May 23, 2026",
+  "timestamp": "2026-05-24T12:59:32.199Z",
   "summary": {
-    "totalReviews": 2,
-    "gmapsCount": 1,
-    "gmapsAvg": "5.0",
+    "totalReviews": 4,
+    "gmapsCount": 3,
+    "gmapsAvg": "4.7",
     "taCount": 1,
-    "taAvg": "1.0",
-    "combinedAvg": "3.0",
-    "totalBonus": 20
+    "taAvg": "5.0",
+    "combinedAvg": "4.8",
+    "totalBonus": 30
   },
   "guides": [
     {
-      "name": "Jodi Bailey",
-      "gmaps": 1,
+      "name": "Shannon Williams",
+      "gmaps": 2,
       "ta": 0,
-      "fiveStar": 1,
-      "bonus": 10
+      "fiveStar": 2,
+      "bonus": 20
     },
     {
-      "name": "RIpley Caldwell",
+      "name": "Sierra Baker",
       "gmaps": 1,
       "ta": 0,
       "fiveStar": 1,
@@ -27,13 +27,6 @@
     },
     {
       "name": "Jessica Verrault",
-      "gmaps": 0,
-      "ta": 0,
-      "fiveStar": 0,
-      "bonus": 0
-    },
-    {
-      "name": "Shannon Williams",
       "gmaps": 0,
       "ta": 0,
       "fiveStar": 0,
@@ -54,7 +47,21 @@
       "bonus": 0
     },
     {
+      "name": "Jodi Bailey",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
       "name": "Tyler Trainor",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
+      "name": "RIpley Caldwell",
       "gmaps": 0,
       "ta": 0,
       "fiveStar": 0,
@@ -76,13 +83,6 @@
     },
     {
       "name": "John Kane",
-      "gmaps": 0,
-      "ta": 0,
-      "fiveStar": 0,
-      "bonus": 0
-    },
-    {
-      "name": "Sierra Baker",
       "gmaps": 0,
       "ta": 0,
       "fiveStar": 0,
@@ -124,28 +124,21 @@
       "bonus": 0
     }
   ],
-  "lowRatings": [
-    {
-      "guide": "UNASSIGNED",
-      "rating": 1,
-      "platform": "tripadvisor",
-      "text": "It was horrible and tragedy full experience. \nDriver saved tea / coffee / water bottle and snakes what ch were supposed to be served to us. There was NO facility of these things on the way of 200 miles (Appx).. \nThe van was totally third class and outdated. Each and every part of the body of the van was shouting and noising. The interior was totally miser and even safety handles were also not fixed. The space between rows and seats were most uncomfortable. All 8 passengers were Senior Citizens and experienced great physical difficulties. \nThis trip was NOT a pleasant tour but a terrible long ride. \n\nI think I will never recommend to anyone.\n\nSorry."
-    }
-  ],
+  "lowRatings": [],
   "allTime": {
     "googleMaps": {
-      "count": 100,
-      "avg": "4.54"
+      "count": 54,
+      "avg": "4.69"
     },
     "tripAdvisor": {
-      "count": 100,
-      "avg": "4.55"
+      "count": 52,
+      "avg": "4.37"
     },
     "combined": {
-      "count": 200,
-      "avg": "4.54"
+      "count": 106,
+      "avg": "4.53"
     },
-    "averageRating": "4.54",
-    "totalReviews": 200
+    "averageRating": "4.53",
+    "totalReviews": 106
   }
 }
