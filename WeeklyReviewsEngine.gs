@@ -787,10 +787,9 @@ function runWeeklyReport() {
     Logger.log('   ✓ Dashboard JSON built');
     Logger.log('');
 
-    Logger.log('📧 Emailing dashboard JSON as attachment + team draft...');
-    emailDashboardJSON(win.weekLabel, dashboardJSON, C);
-    createEmailDraftHTML(metrics, running, win.weekLabel, C);
-    Logger.log('   ✓ JSON adjunto enviado + team draft created');
+    Logger.log('📧 Enviando email con tablas + JSON adjunto...');
+    sendWeeklyEmail(metrics, running, win.weekLabel, dashboardJSON, C);
+    Logger.log('   ✓ Email enviado con tablas HTML + akwl-reviews-data.json adjunto');
     Logger.log('');
 
     // -------- Everything above succeeded. Persist state LAST so a partial
@@ -1583,21 +1582,14 @@ function buildDashboardJSON(metrics, runningState, win, C) {
 
 // Emails the dashboard data.json as an attachment. No manual download needed —
 // open the email, save the attachment, upload it to the dashboard. Done.
+// Kept for backwards-compat calls from util functions; delegates to sendWeeklyEmail
 function emailDashboardJSON(weekLabel, dashboardJson, C) {
-  var subject = 'AKWL Weekly Reviews — ' + weekLabel;
-  var dashUrl = PropertiesService.getScriptProperties().getProperty('DASHBOARD_URL') || '';
-
   var blob = Utilities.newBlob(dashboardJson, 'application/json', 'akwl-reviews-data.json');
+  var subject = 'AKWL Weekly Reviews — ' + weekLabel;
   MailApp.sendEmail({
     to: C.EMAIL_TO,
     subject: subject,
-    body: 'Weekly Reviews — ' + weekLabel + '\n\n' +
-          'Adjunto el akwl-reviews-data.json actualizado (historial completo incluido).\n\n' +
-          'Pasos:\n' +
-          '  1. Guardá el archivo adjunto\n' +
-          '  2. Abrí el dashboard' + (dashUrl ? ': ' + dashUrl : '') + '\n' +
-          '  3. Click "↑ Upload data.json" → seleccioná el archivo adjunto\n\n' +
-          'Generado: ' + new Date().toString(),
+    body: 'Weekly Reviews — ' + weekLabel + '\n\nAdjunto el akwl-reviews-data.json actualizado.\n\nGenerado: ' + new Date().toString(),
     attachments: [blob],
     name: 'Alaska Wild Lights Reviews'
   });
@@ -1647,9 +1639,10 @@ function pushToGitHub(jsonContent, C) {
   }
 }
 
-function createEmailDraftHTML(metrics, runningState, weekLabel, C) {
+// Sends a single email: HTML tables (per-platform 5★ breakdown) + JSON attachment
+function sendWeeklyEmail(metrics, runningState, weekLabel, dashboardJson, C) {
   var subject = 'AKWL Weekly Reviews — ' + weekLabel;
-  var dashUrl = 'https://alaskawildlights.github.io/akwl-reviews/dashboard.html';
+  var dashUrl = 'https://akwl-reviews.netlify.app';
 
   var bonus = metrics.guideStats.filter(function(g){return g.bonus>0;});
 
@@ -1757,20 +1750,21 @@ function createEmailDraftHTML(metrics, runningState, weekLabel, C) {
     '<a href="' + C.WEEKLY_REVIEWS_URL + '">📋 Weekly Reviews</a> | ' +
     '<a href="' + C.FLAGGED_REVIEWS_URL + '">⚠️ Flagged</a> | ' +
     '<a href="' + C.EMPLOYEE_INFO_URL + '">👥 Team</a></p>' +
-    '<div class="footer">Generated automatically by AKWL Reviews Engine v4.11</div>' +
+    '<div class="footer">Generated automatically by AKWL Reviews Engine v4.17</div>' +
     '</div></body></html>';
 
   // FIX 2: Always pass a non-empty plain-text body. Some Gmail clients render
-  // an empty/garbled message when the plain-text part is ''.
   var plainFallback = 'Weekly Reviews — ' + weekLabel + '\n\n' +
-    'This email requires an HTML-capable email client.\n\n' +
-    'View dashboard: ' + dashUrl;
+    'Adjunto el akwl-reviews-data.json. Subilo al dashboard: ' + dashUrl + '\n\n' +
+    'This email requires an HTML-capable email client to view the full report.';
 
-  // Main team email: create a DRAFT (not sent) so it can be reviewed/edited
-  // before manually sending to the team.
-  GmailApp.createDraft(C.EMAIL_TO, subject, plainFallback, {
-    cc: C.EMAIL_CC,
+  var blob = Utilities.newBlob(dashboardJson, 'application/json', 'akwl-reviews-data.json');
+  MailApp.sendEmail({
+    to: C.EMAIL_TO,
+    subject: subject,
+    body: plainFallback,
     htmlBody: html,
+    attachments: [blob],
     name: 'Alaska Wild Lights Reviews'
   });
 }
