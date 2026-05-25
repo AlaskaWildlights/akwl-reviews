@@ -1639,131 +1639,91 @@ function pushToGitHub(jsonContent, C) {
   }
 }
 
-// Sends a single email: HTML tables (per-platform 5★ breakdown) + JSON attachment
+// Sends one email: platform 5-star tables + JSON attachment
 function sendWeeklyEmail(metrics, runningState, weekLabel, dashboardJson, C) {
   var subject = 'AKWL Weekly Reviews — ' + weekLabel;
   var dashUrl = 'https://akwl-reviews.netlify.app';
 
-  var bonus = metrics.guideStats.filter(function(g){return g.bonus>0;});
+  var s = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' +
+    'body{font-family:Arial,sans-serif;color:#222;margin:0;padding:20px;background:#f5f5f5}' +
+    '.wrap{max-width:620px;margin:0 auto;background:#fff;padding:24px;border-radius:6px}' +
+    'h2{margin:0 0 4px;color:#0d47a1}' +
+    '.sub{color:#666;font-size:13px;margin-bottom:20px}' +
+    'h3{color:#0d47a1;font-size:14px;font-weight:bold;margin:22px 0 6px;text-transform:uppercase;letter-spacing:.5px}' +
+    'table{width:100%;border-collapse:collapse;margin-bottom:6px}' +
+    'th{background:#e8eef8;padding:9px 12px;text-align:left;color:#0d47a1;font-size:13px;border-bottom:2px solid #0d47a1}' +
+    'th.r{text-align:center}' +
+    'td{padding:8px 12px;border-bottom:1px solid #eee;font-size:13px}' +
+    'td.r{text-align:center}' +
+    'tr.tot td{background:#e8eef8;font-weight:bold}' +
+    '.none{background:#d4edda;border-left:4px solid #28a745;padding:10px 14px;font-size:13px;border-radius:3px;margin-bottom:6px}' +
+    '.bonus-box{background:#d4edda;border-left:4px solid #28a745;padding:14px;font-size:18px;font-weight:bold;border-radius:3px;margin-top:16px}' +
+    '.no-bonus{background:#fff3cd;border-left:4px solid #ffc107;padding:14px;font-size:13px;border-radius:3px;margin-top:16px}' +
+    '.foot{font-size:11px;color:#aaa;margin-top:24px;padding-top:12px;border-top:1px solid #eee}' +
+    '</style></head><body><div class="wrap">' +
+    '<h2>Alaska Wild Lights</h2>' +
+    '<div class="sub">Weekly Reviews &mdash; ' + weekLabel + '</div>';
 
-  var bonusRows = '';
-  if(bonus.length>0){
-    bonus.forEach(function(g){
-      bonusRows += '<tr><td style="padding:10px">' + g.name + '</td>' +
-                   '<td style="padding:10px;text-align:center">' + g.gmaps + '</td>' +
-                   '<td style="padding:10px;text-align:center">' + g.ta + '</td>' +
-                   '<td style="padding:10px;text-align:center;font-weight:bold;color:#2e7d32">$' + g.bonus + '</td></tr>';
-    });
-  }
-
-  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' +
-    'body{font-family:Arial,sans-serif;color:#333;background:#f5f5f5;margin:0;padding:20px}' +
-    '.container{max-width:700px;margin:0 auto;background:white;padding:30px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}' +
-    'h1{color:#0d47a1;margin-top:0;margin-bottom:5px}' +
-    '.week{color:#666;font-size:14px;margin-bottom:20px}' +
-    '.metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin:20px 0}' +
-    '.metric{border:1px solid #ddd;padding:15px;border-radius:5px;background:#f9f9f9;text-align:center}' +
-    '.metric-value{font-size:32px;font-weight:bold;color:#0d47a1;line-height:1}' +
-    '.metric-label{font-size:11px;color:#999;text-transform:uppercase;margin-top:8px}' +
-    '.metric-avg{font-size:14px;color:#666;margin-top:5px}' +
-    'table{width:100%;border-collapse:collapse;margin:20px 0}' +
-    'th{background:#e8eef8;padding:12px;text-align:left;border-bottom:2px solid #0d47a1;color:#0d47a1;font-weight:bold}' +
-    'td{padding:10px;border-bottom:1px solid #eee}' +
-    'tr:last-child{background:#e8eef8;font-weight:bold}' +
-    'a{color:#0d47a1;text-decoration:none}' +
-    'a:hover{text-decoration:underline}' +
-    '.section-title{color:#0d47a1;font-size:16px;font-weight:bold;margin-top:25px;margin-bottom:10px}' +
-    '.info-box{background:#fff3cd;border-left:4px solid #ffc107;padding:15px;margin:15px 0;border-radius:4px}' +
-    '.success-box{background:#d4edda;border-left:4px solid #28a745;padding:15px;margin:15px 0;border-radius:4px}' +
-    '.footer{font-size:12px;color:#999;margin-top:30px;padding-top:20px;border-top:1px solid #eee}' +
-    '</style></head><body>' +
-    '<div class="container">' +
-    '<h1>🌌 Alaska Wild Lights</h1>' +
-    '<div class="week">Weekly Reviews — ' + weekLabel + '</div>' +
-    '<div class="metrics">' +
-    '<div class="metric"><div class="metric-value">' + metrics.gmapsCount + '</div><div class="metric-label">Google Maps</div><div class="metric-avg">' + metrics.gmapsAvg + '★</div></div>' +
-    '<div class="metric"><div class="metric-value">' + metrics.taCount + '</div><div class="metric-label">TripAdvisor</div><div class="metric-avg">' + metrics.taAvg + '★</div></div>' +
-    '<div class="metric"><div class="metric-value">' + metrics.combinedCount + '</div><div class="metric-label">Combined</div><div class="metric-avg">' + metrics.combinedAvg + '★</div></div>' +
-    '</div>' +
-    '<div class="section-title">All-Time Running Averages</div>' +
-    '<table><tr><th>Platform</th><th style="text-align:center">Reviews</th><th style="text-align:center">Average</th></tr>' +
-    '<tr><td>Google Maps</td><td style="text-align:center">' + runningState.gmaps.count + '</td><td style="text-align:center;font-weight:bold">' + runningState.gmaps.avg + '★</td></tr>' +
-    '<tr><td>TripAdvisor</td><td style="text-align:center">' + runningState.ta.count + '</td><td style="text-align:center;font-weight:bold">' + runningState.ta.avg + '★</td></tr>' +
-    '<tr><td><strong>Combined</strong></td><td style="text-align:center"><strong>' + runningState.combined.count + '</strong></td><td style="text-align:center;color:#0d47a1"><strong>' + runningState.combined.avg + '★</strong></td></tr>' +
-    '</table>' +
-    '</table>';
-
-  // Google Maps 5★ by guide
+  // Google Maps table
   var gmapsGuides = metrics.guideStats.filter(function(g){ return g.gmapsFiveStar > 0; });
-  html += '<div class="section-title">🗺️ Google Maps — 5★ esta semana</div>';
+  s += '<h3>Google Maps &mdash; 5&#9733; esta semana</h3>';
   if (gmapsGuides.length > 0) {
-    html += '<table><tr><th>Guía</th><th style="text-align:center">Reviews GMaps</th><th style="text-align:center">5★</th><th style="text-align:center">Bonus</th></tr>';
+    var gmapsTotal5 = 0;
+    s += '<table><tr><th>Gu&iacute;a</th><th class="r">Reviews</th><th class="r">5&#9733;</th><th class="r">Bonus</th></tr>';
     gmapsGuides.forEach(function(g) {
-      html += '<tr><td style="padding:10px">' + g.name + '</td>' +
-              '<td style="padding:10px;text-align:center">' + g.gmaps + '</td>' +
-              '<td style="padding:10px;text-align:center;font-weight:bold">⭐ ' + g.gmapsFiveStar + '</td>' +
-              '<td style="padding:10px;text-align:center;font-weight:bold;color:#2e7d32">$' + (g.gmapsFiveStar * 10) + '</td></tr>';
+      gmapsTotal5 += g.gmapsFiveStar;
+      s += '<tr><td>' + g.name + '</td><td class="r">' + g.gmaps + '</td>' +
+           '<td class="r"><b>&#11088; ' + g.gmapsFiveStar + '</b></td>' +
+           '<td class="r" style="color:#2e7d32"><b>$' + (g.gmapsFiveStar * 10) + '</b></td></tr>';
     });
-    var gmapsTotal5 = gmapsGuides.reduce(function(s,g){ return s + g.gmapsFiveStar; }, 0);
-    html += '<tr style="background:#e8eef8"><td style="padding:10px"><strong>TOTAL</strong></td><td style="text-align:center">—</td>' +
-            '<td style="padding:10px;text-align:center"><strong>' + gmapsTotal5 + '</strong></td>' +
-            '<td style="padding:10px;text-align:center"><strong style="color:#2e7d32">$' + (gmapsTotal5 * 10) + '</strong></td></tr></table>';
+    s += '<tr class="tot"><td>TOTAL</td><td class="r">&mdash;</td>' +
+         '<td class="r">' + gmapsTotal5 + '</td>' +
+         '<td class="r" style="color:#2e7d32">$' + (gmapsTotal5 * 10) + '</td></tr></table>';
   } else {
-    html += '<div class="success-box">✓ Sin 5★ en Google Maps esta semana</div>';
+    s += '<div class="none">Sin 5&#9733; en Google Maps esta semana</div>';
   }
 
-  // TripAdvisor 5★ by guide
+  // TripAdvisor table
   var taGuides = metrics.guideStats.filter(function(g){ return g.taFiveStar > 0; });
-  html += '<div class="section-title">🧳 TripAdvisor — 5★ esta semana</div>';
+  s += '<h3>TripAdvisor &mdash; 5&#9733; esta semana</h3>';
   if (taGuides.length > 0) {
-    html += '<table><tr><th>Guía</th><th style="text-align:center">Reviews TA</th><th style="text-align:center">5★</th><th style="text-align:center">Bonus</th></tr>';
+    var taTotal5 = 0;
+    s += '<table><tr><th>Gu&iacute;a</th><th class="r">Reviews</th><th class="r">5&#9733;</th><th class="r">Bonus</th></tr>';
     taGuides.forEach(function(g) {
-      html += '<tr><td style="padding:10px">' + g.name + '</td>' +
-              '<td style="padding:10px;text-align:center">' + g.ta + '</td>' +
-              '<td style="padding:10px;text-align:center;font-weight:bold">⭐ ' + g.taFiveStar + '</td>' +
-              '<td style="padding:10px;text-align:center;font-weight:bold;color:#2e7d32">$' + (g.taFiveStar * 5) + '</td></tr>';
+      taTotal5 += g.taFiveStar;
+      s += '<tr><td>' + g.name + '</td><td class="r">' + g.ta + '</td>' +
+           '<td class="r"><b>&#11088; ' + g.taFiveStar + '</b></td>' +
+           '<td class="r" style="color:#2e7d32"><b>$' + (g.taFiveStar * 5) + '</b></td></tr>';
     });
-    var taTotal5 = taGuides.reduce(function(s,g){ return s + g.taFiveStar; }, 0);
-    html += '<tr style="background:#e8eef8"><td style="padding:10px"><strong>TOTAL</strong></td><td style="text-align:center">—</td>' +
-            '<td style="padding:10px;text-align:center"><strong>' + taTotal5 + '</strong></td>' +
-            '<td style="padding:10px;text-align:center"><strong style="color:#2e7d32">$' + (taTotal5 * 5) + '</strong></td></tr></table>';
+    s += '<tr class="tot"><td>TOTAL</td><td class="r">&mdash;</td>' +
+         '<td class="r">' + taTotal5 + '</td>' +
+         '<td class="r" style="color:#2e7d32">$' + (taTotal5 * 5) + '</td></tr></table>';
   } else {
-    html += '<div class="success-box">✓ Sin 5★ en TripAdvisor esta semana</div>';
+    s += '<div class="none">Sin 5&#9733; en TripAdvisor esta semana</div>';
   }
 
-  // Combined bonus summary
-  html += '<div class="section-title">💰 Bonus total esta semana</div>';
+  // Bonus total
   if (metrics.totalBonus > 0) {
-    html += '<div class="success-box" style="font-size:16px;font-weight:bold">$' + metrics.totalBonus + ' en bonuses esta semana</div>';
+    s += '<div class="bonus-box">Bonus total: $' + metrics.totalBonus + '</div>';
   } else {
-    html += '<div class="info-box">Sin bonuses esta semana (ningún 5★ asignado a guía)</div>';
+    s += '<div class="no-bonus">Sin bonuses esta semana</div>';
   }
 
-  if(metrics.lowRating.length > 0){
-    html += '<div class="info-box">⚠️ <strong>' + metrics.lowRating.length + ' low-rating review(s)</strong> — Check the Flagged Reviews sheet for details</div>';
-  } else {
-    html += '<div class="success-box">✓ No 1-2 star reviews this week</div>';
-  }
+  s += '<div class="foot">Generado por AKWL Reviews Engine v4.17 &mdash; ' +
+       '<a href="' + dashUrl + '" style="color:#0d47a1">Dashboard</a></div>' +
+       '</div></body></html>';
 
-  html += '<div class="section-title">Quick Links</div>' +
-    '<p><a href="' + dashUrl + '">📊 Dashboard</a> | ' +
-    '<a href="' + C.WEEKLY_REVIEWS_URL + '">📋 Weekly Reviews</a> | ' +
-    '<a href="' + C.FLAGGED_REVIEWS_URL + '">⚠️ Flagged</a> | ' +
-    '<a href="' + C.EMPLOYEE_INFO_URL + '">👥 Team</a></p>' +
-    '<div class="footer">Generated automatically by AKWL Reviews Engine v4.17</div>' +
-    '</div></body></html>';
-
-  // FIX 2: Always pass a non-empty plain-text body. Some Gmail clients render
-  var plainFallback = 'Weekly Reviews — ' + weekLabel + '\n\n' +
-    'Adjunto el akwl-reviews-data.json. Subilo al dashboard: ' + dashUrl + '\n\n' +
-    'This email requires an HTML-capable email client to view the full report.';
+  var plainText = 'Weekly Reviews — ' + weekLabel + '\n\n' +
+    'Google Maps 5★: ' + metrics.gmapsFiveStarTotal + ' | TripAdvisor 5★: ' + metrics.taFiveStarTotal + '\n' +
+    'Bonus total: $' + metrics.totalBonus + '\n\n' +
+    'Adjunto: akwl-reviews-data.json — subilo al dashboard: ' + dashUrl;
 
   var blob = Utilities.newBlob(dashboardJson, 'application/json', 'akwl-reviews-data.json');
   MailApp.sendEmail({
     to: C.EMAIL_TO,
     subject: subject,
-    body: plainFallback,
-    htmlBody: html,
+    body: plainText,
+    htmlBody: s,
     attachments: [blob],
     name: 'Alaska Wild Lights Reviews'
   });
