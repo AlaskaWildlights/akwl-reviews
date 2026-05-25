@@ -155,6 +155,36 @@ var HISTORY_BASELINE_2026 = {
     {name:'Sullivan Bogardus', monthlyFiveStar:{}},
     {name:'Pepper Burrel',     monthlyFiveStar:{}},
     {name:'Gina Sliger',       monthlyFiveStar:{}}
+  ],
+  // May 2026 weekly entries — hardcoded so they're never lost even without an email
+  weekly: [
+    {
+      weekLabel: 'May 3 – May 9, 2026', startDate: '2026-05-03', endDate: '2026-05-09',
+      platforms: { googleMaps: {count:2,avg:5,fiveStar:2}, tripAdvisor: {count:4,avg:4,fiveStar:0} },
+      totalReviews: 6, totalBonus: 45,
+      guides: [
+        {name:'Shannon Williams', gmaps:2, ta:2, fiveStar:4, bonus:30, gmapsFiveStar:2, taFiveStar:0},
+        {name:'Dylan Berggren',   gmaps:1, ta:1, fiveStar:2, bonus:15, gmapsFiveStar:1, taFiveStar:0}
+      ]
+    },
+    {
+      weekLabel: 'May 10 – May 16, 2026', startDate: '2026-05-10', endDate: '2026-05-16',
+      platforms: { googleMaps: {count:1,avg:5,fiveStar:1}, tripAdvisor: {count:1,avg:1,fiveStar:0} },
+      totalReviews: 2, totalBonus: 20,
+      guides: [
+        {name:'Jodi Bailey',     gmaps:1, ta:0, fiveStar:1, bonus:10, gmapsFiveStar:1, taFiveStar:0},
+        {name:'RIpley Caldwell', gmaps:1, ta:0, fiveStar:1, bonus:10, gmapsFiveStar:1, taFiveStar:0}
+      ]
+    },
+    {
+      weekLabel: 'May 17 – May 23, 2026', startDate: '2026-05-17', endDate: '2026-05-23',
+      platforms: { googleMaps: {count:3,avg:4.7,fiveStar:2}, tripAdvisor: {count:1,avg:5,fiveStar:1} },
+      totalReviews: 4, totalBonus: 30,
+      guides: [
+        {name:'Shannon Williams', gmaps:2, ta:0, fiveStar:2, bonus:20, gmapsFiveStar:2, taFiveStar:0},
+        {name:'Sierra Baker',     gmaps:1, ta:0, fiveStar:1, bonus:10, gmapsFiveStar:1, taFiveStar:0}
+      ]
+    }
   ]
 };
 
@@ -432,14 +462,14 @@ function util_AddManualWeek() {
   Logger.log('║   util_AddManualWeek: ' + WEEK_LABEL.substring(0, 19) + '  ║');
   Logger.log('╚════════════════════════════════════════════╝');
 
-  // Read last email — primary memory, no Drive
+  // Seed from hardcoded baseline, then override with last email
+  var weeklyMap = {};
+  (HISTORY_BASELINE_2026.weekly || []).forEach(function(w) { weeklyMap[w.weekLabel] = w; });
+
   Logger.log('📧 Searching last AKWL email for previous JSON...');
   var lastEmailJson = readLastEmailedJSON();
   var emailWeekly = (lastEmailJson && lastEmailJson.history && lastEmailJson.history.weekly) || [];
   Logger.log('   ✓ Email weekly entries: ' + emailWeekly.length);
-
-  // Merge email + manual week (deduped by weekLabel)
-  var weeklyMap = {};
   emailWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
   weeklyMap[WEEK_LABEL] = {
     weekLabel: WEEK_LABEL,
@@ -654,19 +684,9 @@ function runWeeklyReport() {
   try {
     Logger.log('');
     Logger.log('╔════════════════════════════════════════════╗');
-    Logger.log('║ AKWL Weekly Reviews Engine v4.11.2        ║');
+    Logger.log('║ AKWL Weekly Reviews Engine v4.16          ║');
     Logger.log('╚════════════════════════════════════════════╝');
     Logger.log('');
-
-    var props = PropertiesService.getScriptProperties();
-    if (props.getProperty('BOOTSTRAP_COMPLETED') !== 'true') {
-      Logger.log('⚠️  BOOTSTRAP NOT INITIALIZED');
-      Logger.log('   Run bootstrap_Initialize6MonthHistory() first');
-      notifyFailure(C, 'Bootstrap missing',
-        'runWeeklyReport aborted because BOOTSTRAP_COMPLETED is not set.\n' +
-        'Run bootstrap_Initialize6MonthHistory() once before scheduling.');
-      return;
-    }
 
     var win = getWeekWindow();
     Logger.log('📅 DATE WINDOW:');
@@ -1443,14 +1463,15 @@ function writeDashboardDataToDrive(jsonContent) {
 //   2. HISTORY_BASELINE_2026 (hardcoded) — permanent floor for Jan-Apr
 // No Drive dependency. Weekly entries from last email + new week, deduplicated.
 function buildDashboardJSON(metrics, runningState, win, C) {
-  // 1. Read last emailed JSON — the inbox is the memory
+  // 1. Seed from hardcoded baseline (lowest priority — email/new data overrides)
+  var weeklyMap = {};
+  (HISTORY_BASELINE_2026.weekly || []).forEach(function(w) { weeklyMap[w.weekLabel] = w; });
+
+  // 2. Read last emailed JSON — overrides baseline for any matching week
   Logger.log('   📧 Searching last AKWL email for previous JSON...');
   var lastEmailJson = readLastEmailedJSON();
   var emailWeekly = (lastEmailJson && lastEmailJson.history && lastEmailJson.history.weekly) || [];
   Logger.log('   ✓ Email weekly entries: ' + emailWeekly.length);
-
-  // 2. Merge email entries + current week (deduped by weekLabel)
-  var weeklyMap = {};
   emailWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
   weeklyMap[win.weekLabel] = {
     weekLabel: win.weekLabel,
