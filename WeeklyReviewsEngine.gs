@@ -608,8 +608,8 @@ function bootstrap_SeedMonthlyMay2026() {
       endDate: we,
       timestamp: new Date().toISOString(),
       platforms: {
-        googleMaps:  { count: metrics.gmapsCount, avg: parseFloat(metrics.gmapsAvg) || 0, fiveStar: 0 },
-        tripAdvisor: { count: metrics.taCount,    avg: parseFloat(metrics.taAvg)    || 0, fiveStar: 0 }
+        googleMaps:  { count: metrics.gmapsCount, avg: parseFloat(metrics.gmapsAvg) || 0, fiveStar: metrics.gmapsFiveStarTotal || 0 },
+        tripAdvisor: { count: metrics.taCount,    avg: parseFloat(metrics.taAvg)    || 0, fiveStar: metrics.taFiveStarTotal || 0 }
       },
       totalReviews: metrics.combinedCount,
       totalBonus: metrics.totalBonus,
@@ -1019,8 +1019,8 @@ function findGuidesInText(text, guides, aliases) {
 
 function calculateMetrics(matched, guides, gmapsWeek, taWeek) {
   var stats = {};
-  guides.forEach(function(g){stats[g]={name:g,gmaps:0,ta:0,fiveStar:0,bonus:0};});
-  stats['UNASSIGNED']={name:'UNASSIGNED',gmaps:0,ta:0,fiveStar:0,bonus:0};
+  guides.forEach(function(g){stats[g]={name:g,gmaps:0,ta:0,fiveStar:0,gmapsFiveStar:0,taFiveStar:0,bonus:0};});
+  stats['UNASSIGNED']={name:'UNASSIGNED',gmaps:0,ta:0,fiveStar:0,gmapsFiveStar:0,taFiveStar:0,bonus:0};
 
   var lowRating = [];
   var totalFiveStar = 0;
@@ -1037,11 +1037,13 @@ function calculateMetrics(matched, guides, gmapsWeek, taWeek) {
     var bonusAmount = (platform === 'gmaps' ? 10 : 5);
 
     assignedGuides.forEach(function(guide) {
-      if (!stats[guide]) stats[guide]={name:guide,gmaps:0,ta:0,fiveStar:0,bonus:0};
+      if (!stats[guide]) stats[guide]={name:guide,gmaps:0,ta:0,fiveStar:0,gmapsFiveStar:0,taFiveStar:0,bonus:0};
       if (platform==='gmaps') stats[guide].gmaps++;
       else stats[guide].ta++;
       if (rating === 5) {
         stats[guide].fiveStar++;
+        if (platform === 'gmaps') stats[guide].gmapsFiveStar++;
+        else stats[guide].taFiveStar++;
         stats[guide].bonus += bonusAmount;
       }
     });
@@ -1067,6 +1069,10 @@ function calculateMetrics(matched, guides, gmapsWeek, taWeek) {
   var list=guides.map(function(g){totalBonus+=stats[g].bonus;return stats[g];});
   list.sort(function(a,b){return b.bonus-a.bonus;});
 
+  // Platform-level 5-star totals (count unique reviews, not per-guide credits)
+  var gmapsFiveStarTotal = gmapsWeek.filter(function(r){ return parseInt(r.stars||r.rating||0)===5; }).length;
+  var taFiveStarTotal = taWeek.filter(function(r){ return parseInt(r.rating||r.bubbleRating||0)===5; }).length;
+
   return {
     guideStats:list,
     lowRating:lowRating,
@@ -1077,7 +1083,9 @@ function calculateMetrics(matched, guides, gmapsWeek, taWeek) {
     taAvg:avg(taR),
     combinedAvg:avg(gmR.concat(taR)),
     totalBonus:totalBonus,
-    totalFiveStar:totalFiveStar
+    totalFiveStar:totalFiveStar,
+    gmapsFiveStarTotal:gmapsFiveStarTotal,
+    taFiveStarTotal:taFiveStarTotal
   };
 }
 
@@ -1467,8 +1475,8 @@ function buildDashboardJSON(metrics, runningState, win, C) {
     endDate:   win.endDateStr,
     timestamp: new Date().toISOString(),
     platforms: {
-      googleMaps:  { count: metrics.gmapsCount, avg: parseFloat(metrics.gmapsAvg) || 0, fiveStar: 0 },
-      tripAdvisor: { count: metrics.taCount,    avg: parseFloat(metrics.taAvg)    || 0, fiveStar: 0 }
+      googleMaps:  { count: metrics.gmapsCount, avg: parseFloat(metrics.gmapsAvg) || 0, fiveStar: metrics.gmapsFiveStarTotal || 0 },
+      tripAdvisor: { count: metrics.taCount,    avg: parseFloat(metrics.taAvg)    || 0, fiveStar: metrics.taFiveStarTotal || 0 }
     },
     totalReviews: metrics.combinedCount,
     totalBonus:   metrics.totalBonus,
@@ -1686,15 +1694,52 @@ function createEmailDraftHTML(metrics, runningState, weekLabel, C) {
     '<tr><td>TripAdvisor</td><td style="text-align:center">' + runningState.ta.count + '</td><td style="text-align:center;font-weight:bold">' + runningState.ta.avg + '★</td></tr>' +
     '<tr><td><strong>Combined</strong></td><td style="text-align:center"><strong>' + runningState.combined.count + '</strong></td><td style="text-align:center;color:#0d47a1"><strong>' + runningState.combined.avg + '★</strong></td></tr>' +
     '</table>' +
-    '<div class="section-title">5-Star Bonus Earners</div>' +
-    '<p style="font-size:13px;color:#666">$10 per Google Maps review | $5 per TripAdvisor review</p>';
+    '</table>';
 
-  if(bonus.length>0){
-    html += '<table><tr><th>Guide</th><th style="text-align:center">Google</th><th style="text-align:center">TA</th><th style="text-align:center">Bonus</th></tr>' +
-            bonusRows +
-            '<tr><td style="padding:10px"><strong>TOTAL</strong></td><td style="text-align:center">—</td><td style="text-align:center">—</td><td style="text-align:center"><strong style="color:#2e7d32">$' + metrics.totalBonus + '</strong></td></tr></table>';
+  // Google Maps 5★ by guide
+  var gmapsGuides = metrics.guideStats.filter(function(g){ return g.gmapsFiveStar > 0; });
+  html += '<div class="section-title">🗺️ Google Maps — 5★ esta semana</div>';
+  if (gmapsGuides.length > 0) {
+    html += '<table><tr><th>Guía</th><th style="text-align:center">Reviews GMaps</th><th style="text-align:center">5★</th><th style="text-align:center">Bonus</th></tr>';
+    gmapsGuides.forEach(function(g) {
+      html += '<tr><td style="padding:10px">' + g.name + '</td>' +
+              '<td style="padding:10px;text-align:center">' + g.gmaps + '</td>' +
+              '<td style="padding:10px;text-align:center;font-weight:bold">⭐ ' + g.gmapsFiveStar + '</td>' +
+              '<td style="padding:10px;text-align:center;font-weight:bold;color:#2e7d32">$' + (g.gmapsFiveStar * 10) + '</td></tr>';
+    });
+    var gmapsTotal5 = gmapsGuides.reduce(function(s,g){ return s + g.gmapsFiveStar; }, 0);
+    html += '<tr style="background:#e8eef8"><td style="padding:10px"><strong>TOTAL</strong></td><td style="text-align:center">—</td>' +
+            '<td style="padding:10px;text-align:center"><strong>' + gmapsTotal5 + '</strong></td>' +
+            '<td style="padding:10px;text-align:center"><strong style="color:#2e7d32">$' + (gmapsTotal5 * 10) + '</strong></td></tr></table>';
   } else {
-    html += '<div class="success-box">✓ No 5-star reviews this week</div>';
+    html += '<div class="success-box">✓ Sin 5★ en Google Maps esta semana</div>';
+  }
+
+  // TripAdvisor 5★ by guide
+  var taGuides = metrics.guideStats.filter(function(g){ return g.taFiveStar > 0; });
+  html += '<div class="section-title">🧳 TripAdvisor — 5★ esta semana</div>';
+  if (taGuides.length > 0) {
+    html += '<table><tr><th>Guía</th><th style="text-align:center">Reviews TA</th><th style="text-align:center">5★</th><th style="text-align:center">Bonus</th></tr>';
+    taGuides.forEach(function(g) {
+      html += '<tr><td style="padding:10px">' + g.name + '</td>' +
+              '<td style="padding:10px;text-align:center">' + g.ta + '</td>' +
+              '<td style="padding:10px;text-align:center;font-weight:bold">⭐ ' + g.taFiveStar + '</td>' +
+              '<td style="padding:10px;text-align:center;font-weight:bold;color:#2e7d32">$' + (g.taFiveStar * 5) + '</td></tr>';
+    });
+    var taTotal5 = taGuides.reduce(function(s,g){ return s + g.taFiveStar; }, 0);
+    html += '<tr style="background:#e8eef8"><td style="padding:10px"><strong>TOTAL</strong></td><td style="text-align:center">—</td>' +
+            '<td style="padding:10px;text-align:center"><strong>' + taTotal5 + '</strong></td>' +
+            '<td style="padding:10px;text-align:center"><strong style="color:#2e7d32">$' + (taTotal5 * 5) + '</strong></td></tr></table>';
+  } else {
+    html += '<div class="success-box">✓ Sin 5★ en TripAdvisor esta semana</div>';
+  }
+
+  // Combined bonus summary
+  html += '<div class="section-title">💰 Bonus total esta semana</div>';
+  if (metrics.totalBonus > 0) {
+    html += '<div class="success-box" style="font-size:16px;font-weight:bold">$' + metrics.totalBonus + ' en bonuses esta semana</div>';
+  } else {
+    html += '<div class="info-box">Sin bonuses esta semana (ningún 5★ asignado a guía)</div>';
   }
 
   if(metrics.lowRating.length > 0){
