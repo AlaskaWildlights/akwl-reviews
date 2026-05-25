@@ -1,6 +1,6 @@
 {
   "weekLabel": "May 17 – May 23, 2026",
-  "timestamp": "2026-05-24T12:59:32.199Z",
+  "timestamp": "2026-05-25T04:44:07.459Z",
   "summary": {
     "totalReviews": 4,
     "gmapsCount": 3,
@@ -127,18 +127,18 @@
   "lowRatings": [],
   "allTime": {
     "googleMaps": {
-      "count": 54,
-      "avg": "4.69"
+      "count": 103,
+      "avg": "4.54"
     },
     "tripAdvisor": {
-      "count": 52,
-      "avg": "4.37"
+      "count": 101,
+      "avg": "4.55"
     },
     "combined": {
-      "count": 106,
-      "avg": "4.53"
+      "count": 204,
+      "avg": "4.55"
     },
-    "averageRating": "4.53",
-    "totalReviews": 106
+    "averageRating": "4.55",
+    "totalReviews": 204
   }
 }
