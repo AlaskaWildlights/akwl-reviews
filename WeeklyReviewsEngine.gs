@@ -1,5 +1,15 @@
 // ============================================================
-// ALASKA WILD LIGHTS — Weekly Reviews Engine v4.14
+// ALASKA WILD LIGHTS — Weekly Reviews Engine v4.15
+//
+// v4.15 — EMAIL IS THE DATABASE (Drive becomes optional backup)
+//   - Script reads its OWN previous email attachment to recover the
+//     last known state. Gmail is the primary memory. Drive failures
+//     no longer matter — the user's inbox always has the latest JSON.
+//   - Jan-Apr 2026 history stays hardcoded in HISTORY_BASELINE_2026.
+//   - Each run: read last email JSON → merge with Drive (if any) →
+//     add new week → save to Drive (backup) → email as attachment.
+//   - readLastEmailedJSON searches Gmail for the most recent
+//     "AKWL Weekly Reviews" email with akwl-reviews-data attachment.
 //
 // v4.14 — EMBEDDED BASELINE: Jan-Apr hardcoded in the script
 //   - Jan-Apr 2026 monthly data + per-guide 5-star history are
@@ -422,13 +432,19 @@ function util_AddManualWeek() {
   Logger.log('║   util_AddManualWeek: ' + WEEK_LABEL.substring(0, 19) + '  ║');
   Logger.log('╚════════════════════════════════════════════╝');
 
-  // Read Drive for accumulated weekly entries
+  // Read both sources: last email (primary) + Drive (secondary)
+  Logger.log('📧 Searching last AKWL email for previous JSON...');
+  var lastEmailJson = readLastEmailedJSON();
+  var emailWeekly = (lastEmailJson && lastEmailJson.history && lastEmailJson.history.weekly) || [];
+  Logger.log('   ✓ Email weekly entries: ' + emailWeekly.length);
+
   var driveData = readDashboardDataFromDrive() || {};
   var driveWeekly = driveData.history && driveData.history.weekly ? driveData.history.weekly : [];
-  Logger.log('✓ Drive: ' + driveWeekly.length + ' weekly entries loaded');
+  Logger.log('   ✓ Drive weekly entries: ' + driveWeekly.length);
 
-  // Merge Drive entries + manual week (deduped by weekLabel)
+  // Merge email + Drive + manual week (deduped by weekLabel)
   var weeklyMap = {};
+  emailWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
   driveWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
   weeklyMap[WEEK_LABEL] = {
     weekLabel: WEEK_LABEL,
@@ -1340,6 +1356,40 @@ function rebuildHistoryAggregates(history, priorMonthly, priorByGuide) {
   });
 }
 
+// Reads the JSON attachment from the most recent "AKWL Weekly Reviews" email.
+// This is the primary memory source — even if Drive is wrong or empty, the
+// script can recover the last known state from its own past email.
+// Returns null if no past email is found.
+function readLastEmailedJSON() {
+  try {
+    var threads = GmailApp.search('subject:"AKWL Weekly Reviews" has:attachment filename:akwl-reviews-data', 0, 10);
+    if (!threads || threads.length === 0) return null;
+
+    var allMessages = [];
+    threads.forEach(function(t) {
+      t.getMessages().forEach(function(m) { allMessages.push(m); });
+    });
+    // Most recent first
+    allMessages.sort(function(a, b) { return b.getDate().getTime() - a.getDate().getTime(); });
+
+    for (var i = 0; i < allMessages.length; i++) {
+      var atts = allMessages[i].getAttachments();
+      for (var j = 0; j < atts.length; j++) {
+        if (atts[j].getName().indexOf('akwl-reviews-data') >= 0) {
+          try {
+            var json = JSON.parse(atts[j].getDataAsString());
+            Logger.log('   ✓ readLastEmailedJSON: loaded from ' + allMessages[i].getDate().toISOString());
+            return json;
+          } catch(e) { /* try next */ }
+        }
+      }
+    }
+  } catch(e) {
+    Logger.log('   ⚠  readLastEmailedJSON error: ' + e.message);
+  }
+  return null;
+}
+
 // Reads the latest dashboard data.json from Drive. Returns null if not set.
 function readDashboardDataFromDrive() {
   var fileId = PropertiesService.getScriptProperties().getProperty('DRIVE_FILE_ID');
@@ -1389,17 +1439,27 @@ function writeDashboardDataToDrive(jsonContent) {
 
 // Builds the FULL dashboard JSON: current week + accumulated history.
 //
-// v4.14: Jan-Apr historical data comes from HISTORY_BASELINE_2026 (hardcoded above).
-// Weekly entries accumulate in Drive. Each run: read Drive weekly entries → add new
-// week → rebuild monthly+byGuide using the embedded baseline → save to Drive → email.
-// No GitHub needed. Jan-Apr can never be lost because they're in the code itself.
+// v4.15: Three sources of memory, in priority order:
+//   1. Last emailed JSON (Gmail) — primary: it's what the user has, can't be lost
+//   2. Drive file — secondary: backup
+//   3. HISTORY_BASELINE_2026 (hardcoded) — permanent floor for Jan-Apr
+// Weekly entries from email + Drive are merged, new week is added on top.
+// Even if Drive is empty/wrong, the email contains last week's complete JSON.
 function buildDashboardJSON(metrics, runningState, win, C) {
-  // 1. Read Drive for accumulated weekly entries
+  // 1. Try email first — the user's inbox is the most reliable memory
+  Logger.log('   📧 Searching last AKWL email for previous JSON...');
+  var lastEmailJson = readLastEmailedJSON();
+  var emailWeekly = (lastEmailJson && lastEmailJson.history && lastEmailJson.history.weekly) || [];
+  Logger.log('   ✓ Email weekly entries: ' + emailWeekly.length);
+
+  // 2. Also read Drive as a secondary source (any entries added since last email)
   var driveData = readDashboardDataFromDrive() || {};
   var driveWeekly = driveData.history && driveData.history.weekly ? driveData.history.weekly : [];
+  Logger.log('   ✓ Drive weekly entries: ' + driveWeekly.length);
 
-  // 2. Merge Drive weekly entries + current week (deduped by weekLabel)
+  // 3. Merge email + Drive + current week (deduped by weekLabel, Drive wins on conflict)
   var weeklyMap = {};
+  emailWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
   driveWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
   weeklyMap[win.weekLabel] = {
     weekLabel: win.weekLabel,
