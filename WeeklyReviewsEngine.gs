@@ -432,20 +432,15 @@ function util_AddManualWeek() {
   Logger.log('║   util_AddManualWeek: ' + WEEK_LABEL.substring(0, 19) + '  ║');
   Logger.log('╚════════════════════════════════════════════╝');
 
-  // Read both sources: last email (primary) + Drive (secondary)
+  // Read last email — primary memory, no Drive
   Logger.log('📧 Searching last AKWL email for previous JSON...');
   var lastEmailJson = readLastEmailedJSON();
   var emailWeekly = (lastEmailJson && lastEmailJson.history && lastEmailJson.history.weekly) || [];
   Logger.log('   ✓ Email weekly entries: ' + emailWeekly.length);
 
-  var driveData = readDashboardDataFromDrive() || {};
-  var driveWeekly = driveData.history && driveData.history.weekly ? driveData.history.weekly : [];
-  Logger.log('   ✓ Drive weekly entries: ' + driveWeekly.length);
-
-  // Merge email + Drive + manual week (deduped by weekLabel)
+  // Merge email + manual week (deduped by weekLabel)
   var weeklyMap = {};
   emailWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
-  driveWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
   weeklyMap[WEEK_LABEL] = {
     weekLabel: WEEK_LABEL,
     startDate: START_DATE,
@@ -475,9 +470,6 @@ function util_AddManualWeek() {
   rebuildHistoryAggregates(prior.history, HISTORY_BASELINE_2026.monthly, HISTORY_BASELINE_2026.byGuide);
 
   var finalJson = JSON.stringify(prior, null, 2);
-  var driveId = writeDashboardDataToDrive(finalJson);
-  Logger.log('✓ Saved to Drive');
-
   var blob = Utilities.newBlob(finalJson, 'application/json', 'akwl-reviews-data.json');
   MailApp.sendEmail({
     to: C.EMAIL_TO,
@@ -772,8 +764,7 @@ function runWeeklyReport() {
 
     Logger.log('📊 Building dashboard data.json with accumulated history...');
     var dashboardJSON = buildDashboardJSON(metrics, running, win, C);
-    writeDashboardDataToDrive(dashboardJSON);
-    Logger.log('   ✓ Saved to Drive (weekly entries accumulated)');
+    Logger.log('   ✓ Dashboard JSON built');
     Logger.log('');
 
     Logger.log('📧 Emailing dashboard JSON as attachment + team draft...');
@@ -1447,28 +1438,20 @@ function writeDashboardDataToDrive(jsonContent) {
 
 // Builds the FULL dashboard JSON: current week + accumulated history.
 //
-// v4.15: Three sources of memory, in priority order:
+// v4.16: Two sources of memory only:
 //   1. Last emailed JSON (Gmail) — primary: it's what the user has, can't be lost
-//   2. Drive file — secondary: backup
-//   3. HISTORY_BASELINE_2026 (hardcoded) — permanent floor for Jan-Apr
-// Weekly entries from email + Drive are merged, new week is added on top.
-// Even if Drive is empty/wrong, the email contains last week's complete JSON.
+//   2. HISTORY_BASELINE_2026 (hardcoded) — permanent floor for Jan-Apr
+// No Drive dependency. Weekly entries from last email + new week, deduplicated.
 function buildDashboardJSON(metrics, runningState, win, C) {
-  // 1. Try email first — the user's inbox is the most reliable memory
+  // 1. Read last emailed JSON — the inbox is the memory
   Logger.log('   📧 Searching last AKWL email for previous JSON...');
   var lastEmailJson = readLastEmailedJSON();
   var emailWeekly = (lastEmailJson && lastEmailJson.history && lastEmailJson.history.weekly) || [];
   Logger.log('   ✓ Email weekly entries: ' + emailWeekly.length);
 
-  // 2. Also read Drive as a secondary source (any entries added since last email)
-  var driveData = readDashboardDataFromDrive() || {};
-  var driveWeekly = driveData.history && driveData.history.weekly ? driveData.history.weekly : [];
-  Logger.log('   ✓ Drive weekly entries: ' + driveWeekly.length);
-
-  // 3. Merge email + Drive + current week (deduped by weekLabel, Drive wins on conflict)
+  // 2. Merge email entries + current week (deduped by weekLabel)
   var weeklyMap = {};
   emailWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
-  driveWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
   weeklyMap[win.weekLabel] = {
     weekLabel: win.weekLabel,
     startDate: win.startDateStr,
@@ -1487,7 +1470,7 @@ function buildDashboardJSON(metrics, runningState, win, C) {
   allWeekly.sort(function(a, b) {
     return (a.startDate || '') < (b.startDate || '') ? -1 : 1;
   });
-  Logger.log('   ✓ Weekly entries in Drive + new week: ' + allWeekly.length);
+  Logger.log('   ✓ Weekly entries total: ' + allWeekly.length);
 
   // 3. Rebuild history using embedded Jan-Apr baseline as permanent floor
   var history = { monthly: [], weekly: allWeekly, byGuide: [] };
@@ -1800,13 +1783,9 @@ function util_GenerateMonthlyBaseline() {
   var lastEmailJson = readLastEmailedJSON();
   var emailWeekly = (lastEmailJson && lastEmailJson.history && lastEmailJson.history.weekly) || [];
 
-  var driveData = readDashboardDataFromDrive() || {};
-  var driveWeekly = driveData.history && driveData.history.weekly ? driveData.history.weekly : [];
-
-  // Merge by weekLabel (Drive wins on conflict)
+  // Email is the only source — no Drive
   var weeklyMap = {};
   emailWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
-  driveWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
   var allWeekly = Object.keys(weeklyMap).map(function(k) { return weeklyMap[k]; });
 
   // Filter to weeks that overlap target month
@@ -1816,7 +1795,7 @@ function util_GenerateMonthlyBaseline() {
   Logger.log('   ✓ Weekly entries for ' + targetMonth + ': ' + monthWeeks.length);
 
   if (monthWeeks.length === 0) {
-    Logger.log('⚠  No weekly entries found for ' + targetMonth + '. Check Drive and email.');
+    Logger.log('⚠  No weekly entries found for ' + targetMonth + '. Revisá que llegaron los emails semanales.');
     notifyFailure(C, 'util_GenerateMonthlyBaseline — no data',
       'No weekly entries found for ' + targetMonth + '. ' +
       'Run after the month closes and at least one weekly report has been sent.');
