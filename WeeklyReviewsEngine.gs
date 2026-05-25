@@ -1726,6 +1726,135 @@ function createEmailDraftHTML(metrics, runningState, weekLabel, C) {
   });
 }
 
+// ============================================================
+// AUTO MONTHLY BASELINE GENERATOR
+// ============================================================
+// Run this at any time (e.g. first Monday of the new month) to
+// compute the previous month's totals from all weekly entries that
+// fall in that month. The script emails you a ready-to-paste
+// JavaScript snippet for HISTORY_BASELINE_2026.monthly so you
+// never have to manually tally numbers again.
+//
+// Usage: run util_GenerateMonthlyBaseline() with no arguments.
+// It auto-detects "last month" based on today's date.
+// ============================================================
+function util_GenerateMonthlyBaseline() {
+  var C = getConfig();
+  var now = new Date();
+  // Compute YYYY-MM for last month
+  var d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  var targetMonth = Utilities.formatDate(d, TZ, 'yyyy-MM');
+  Logger.log('');
+  Logger.log('╔════════════════════════════════════════════╗');
+  Logger.log('║   util_GenerateMonthlyBaseline             ║');
+  Logger.log('║   Target month: ' + targetMonth + '                 ║');
+  Logger.log('╚════════════════════════════════════════════╝');
+
+  // Load weekly entries: try email first, then Drive
+  Logger.log('📧 Loading last emailed JSON...');
+  var lastEmailJson = readLastEmailedJSON();
+  var emailWeekly = (lastEmailJson && lastEmailJson.history && lastEmailJson.history.weekly) || [];
+
+  var driveData = readDashboardDataFromDrive() || {};
+  var driveWeekly = driveData.history && driveData.history.weekly ? driveData.history.weekly : [];
+
+  // Merge by weekLabel (Drive wins on conflict)
+  var weeklyMap = {};
+  emailWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
+  driveWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
+  var allWeekly = Object.keys(weeklyMap).map(function(k) { return weeklyMap[k]; });
+
+  // Filter to weeks that overlap target month
+  var monthWeeks = allWeekly.filter(function(w) {
+    return w.endDate && w.endDate.substring(0, 7) === targetMonth;
+  });
+  Logger.log('   ✓ Weekly entries for ' + targetMonth + ': ' + monthWeeks.length);
+
+  if (monthWeeks.length === 0) {
+    Logger.log('⚠  No weekly entries found for ' + targetMonth + '. Check Drive and email.');
+    notifyFailure(C, 'util_GenerateMonthlyBaseline — no data',
+      'No weekly entries found for ' + targetMonth + '. ' +
+      'Run after the month closes and at least one weekly report has been sent.');
+    return;
+  }
+
+  // Accumulate totals
+  var ta  = { count:0, stars:0, fiveStar:0 };
+  var gm  = { count:0, stars:0, fiveStar:0 };
+  var totalReviews = 0, totalStars = 0, totalBonus = 0;
+
+  monthWeeks.forEach(function(w) {
+    var taC = (w.platforms.tripAdvisor.count || 0);
+    var taS = (w.platforms.tripAdvisor.avg || 0) * taC;
+    var taF = (w.platforms.tripAdvisor.fiveStar || 0);
+    var gmC = (w.platforms.googleMaps.count || 0);
+    var gmS = (w.platforms.googleMaps.avg || 0) * gmC;
+    var gmF = (w.platforms.googleMaps.fiveStar || 0);
+    ta.count += taC; ta.stars += taS; ta.fiveStar += taF;
+    gm.count += gmC; gm.stars += gmS; gm.fiveStar += gmF;
+    totalReviews += w.totalReviews || 0;
+    totalStars   += taS + gmS;
+    totalBonus   += w.totalBonus || 0;
+  });
+  var taAvg = ta.count > 0 ? parseFloat((ta.stars / ta.count).toFixed(2)) : null;
+  var gmAvg = gm.count > 0 ? parseFloat((gm.stars / gm.count).toFixed(2)) : null;
+  var combinedAvg = totalReviews > 0 ? parseFloat((totalStars / totalReviews).toFixed(2)) : null;
+
+  // Per-guide breakdown
+  var guideMap = {};
+  monthWeeks.forEach(function(w) {
+    (w.guides || []).forEach(function(g) {
+      if (!guideMap[g.name]) guideMap[g.name] = 0;
+      guideMap[g.name] += g.fiveStar || 0;
+    });
+  });
+
+  // Build the snippet
+  var guideLines = Object.keys(guideMap).filter(function(n){ return guideMap[n] > 0; })
+    .map(function(n){ return "    {name:'" + n + "', monthlyFiveStar:{'" + targetMonth + "':" + guideMap[n] + "}}"; });
+
+  var snippet =
+    '// ── ' + targetMonth + ' AUTO-GENERATED BASELINE ──────────────────\n' +
+    '// Add this entry to HISTORY_BASELINE_2026.monthly:\n' +
+    '{\n' +
+    "  month: '" + targetMonth + "',\n" +
+    '  platforms: {\n' +
+    "    tripAdvisor:  {count:" + ta.count + ",stars:" + Math.round(ta.stars) + ",fiveStar:" + ta.fiveStar + ",avg:" + taAvg + ",breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},\n" +
+    "    googleMaps:   {count:" + gm.count + ",stars:" + Math.round(gm.stars) + ",fiveStar:" + gm.fiveStar + ",avg:" + gmAvg + ",breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},\n" +
+    "    getYourGuide: {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},\n" +
+    "    civitatis:    {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},\n" +
+    "    expedia:      {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},\n" +
+    "    atmosRewards: {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},\n" +
+    "    bookingCom:   {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}}\n" +
+    '  },\n' +
+    '  totalReviews:' + totalReviews + ', totalStars:' + Math.round(totalStars) + ', combinedAvg:' + combinedAvg + ', totalBonus:' + totalBonus + ', estimated:false\n' +
+    '},\n\n' +
+    '// ── ' + targetMonth + ' per-guide entries (add/update in HISTORY_BASELINE_2026.byGuide):\n' +
+    guideLines.join(',\n') + (guideLines.length ? ',' : '// (no guide-level 5-star data this month)') + '\n';
+
+  Logger.log('');
+  Logger.log('📋 SNIPPET (paste into HISTORY_BASELINE_2026):');
+  Logger.log(snippet);
+
+  MailApp.sendEmail({
+    to: C.EMAIL_TO,
+    subject: 'AKWL Reviews — Baseline snippet para ' + targetMonth,
+    body: 'Snippet generado para ' + targetMonth + '.\n\n' +
+          'Pega este bloque en WeeklyReviewsEngine.gs en HISTORY_BASELINE_2026.monthly:\n\n' +
+          '══════════════════════════════════════════════\n' +
+          snippet + '\n' +
+          '══════════════════════════════════════════════\n\n' +
+          'Resumen:\n' +
+          '  TripAdvisor: ' + ta.count + ' reviews, ' + ta.fiveStar + ' de 5★, avg ' + taAvg + '\n' +
+          '  Google Maps: ' + gm.count + ' reviews, ' + gm.fiveStar + ' de 5★, avg ' + gmAvg + '\n' +
+          '  Total: ' + totalReviews + ' reviews, bonus $' + totalBonus + '\n\n' +
+          'Semanas incluidas: ' + monthWeeks.map(function(w){ return w.weekLabel; }).join(', '),
+    name: 'Alaska Wild Lights Reviews'
+  });
+  Logger.log('📧 Snippet enviado a ' + C.EMAIL_TO);
+  Logger.log('✅ Done.');
+}
+
 // Minimal HTML escape for values interpolated into the preview banner.
 function escapeHtmlGs(s) {
   return String(s)
