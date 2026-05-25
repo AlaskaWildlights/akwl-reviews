@@ -133,7 +133,6 @@ footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:0.78rem;
     <button class="btn" onclick="document.getElementById('upload-input').click()">↑ Upload data.json</button>
     <input type="file" id="upload-input" accept="application/json,.json" style="display:none" onchange="handleUpload(event)">
     <button class="btn btn-ghost" onclick="downloadData()">↓ Download</button>
-    <button class="btn" id="bake-btn" onclick="bakeAndDownload()" title="Download a new index.html with current data baked in — drag to Netlify to deploy">↓ Bake &amp; Deploy</button>
     <button class="btn btn-ghost" onclick="resetData()" title="Clear saved data and reload baked-in defaults">↺ Reset</button>
     <div class="entry">
       <span>Last data entry</span>
@@ -1882,40 +1881,6 @@ function monthLong(ym){ const [y,m]=ym.split('-'); return ['January','February',
 function toast(msg, isErr=false){
   const t = $('toast'); t.textContent = msg; t.className = 'toast show' + (isErr?' err':'');
   setTimeout(()=>{ t.className = 'toast' + (isErr?' err':''); }, 3500);
-}
-
-// Fetch the raw HTML template on load so we can bake data into it later
-let PAGE_HTML_TEMPLATE = null;
-fetch(location.href).then(r => r.text()).then(t => {
-  PAGE_HTML_TEMPLATE = t;
-  const btn = $('bake-btn');
-  if(btn) btn.disabled = false;
-}).catch(() => {});
-
-function bakeAndDownload(){
-  if(!PAGE_HTML_TEMPLATE){
-    showToast('Cargando template... intentá de nuevo en 2s', true);
-    return;
-  }
-  // Replace DEFAULT_DATA content with current DATA (preserving sentinel)
-  const jsonStr = JSON.stringify(DATA, null, 2);
-  const baked = PAGE_HTML_TEMPLATE.replace(
-    /const DEFAULT_DATA\s*=\s*\{[\s\S]*?\};\s*\n\/\/ @@BAKED_DATA_END@@/,
-    'const DEFAULT_DATA = ' + jsonStr + ';\n// @@BAKED_DATA_END@@'
-  );
-  if(baked === PAGE_HTML_TEMPLATE){
-    showToast('No se pudo encontrar el bloque DEFAULT_DATA en el template', true);
-    return;
-  }
-  const blob = new Blob([baked], {type:'text/html'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'index.html';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(a.href);
-  showToast('✓ index.html descargado — arrastrálo a Netlify para deployar');
 }
 
 function handleUpload(e){
