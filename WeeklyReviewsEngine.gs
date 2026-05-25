@@ -1,19 +1,18 @@
 // ============================================================
-// ALASKA WILD LIGHTS — Weekly Reviews Engine v4.13
+// ALASKA WILD LIGHTS — Weekly Reviews Engine v4.14
 //
-// v4.13 — SELF-ACCUMULATING: GitHub data.json is the database
-//   - buildDashboardJSON ALWAYS fetches GitHub data.json as the
-//     historical baseline before building the weekly output.
-//     Jan-Apr history is NEVER lost regardless of Drive state.
-//   - Weekly entries are merged from baseline + Drive (deduped by
-//     weekLabel) so even if Drive is reset, history self-heals.
-//   - rebuildHistoryAggregates now accepts priorByGuide to preserve
-//     per-guide 5-star history for months before weekly tracking
-//     started (Jan-Apr 2026 from manual seeding).
-//   - After each run, the complete dashboard JSON is pushed back to
-//     GitHub data.json — the next week's run picks up full history.
-//   - emailDashboardJSON now sends the JSON as an email attachment.
-//     No manual download step needed — open email → save → upload.
+// v4.14 — EMBEDDED BASELINE: Jan-Apr hardcoded in the script
+//   - Jan-Apr 2026 monthly data + per-guide 5-star history are
+//     embedded directly in HISTORY_BASELINE_2026 constant below.
+//     These never change and are NEVER lost — they live in the code.
+//   - buildDashboardJSON reads weekly entries from Drive, adds the
+//     new week, rebuilds monthly+byGuide using the hardcoded baseline
+//     as the permanent historical floor. No GitHub needed.
+//   - emailDashboardJSON sends the complete JSON as an attachment.
+//     Open email → save file → upload to dashboard. Done.
+//   - util_AddManualWeek updated: reads Drive weekly entries, merges
+//     with the manual week, always uses HISTORY_BASELINE_2026.
+//   - No GitHub push or fetch in the weekly flow. Drive only.
 //
 // v4.12 — NETLIFY DASHBOARD + EMAIL ATTACHMENT WORKFLOW
 //   - buildDashboardJSON: builds the full data.json with accumulated
@@ -55,6 +54,99 @@
 
 // Single source of truth for timezone. Day boundaries are at 00:00 in this tz.
 var TZ = 'America/Anchorage';
+
+// ============================================================
+// EMBEDDED HISTORICAL BASELINE — Jan-Apr 2026
+// ============================================================
+// These months have no weekly tracking entries. They are embedded
+// here permanently so they are NEVER lost regardless of Drive state.
+// To update: edit the numbers below and re-deploy the script.
+// Only covers months before weekly Apify tracking started (May 2026).
+// May onward is rebuilt automatically from weekly Drive entries.
+// ============================================================
+var HISTORY_BASELINE_2026 = {
+  monthly: [
+    {
+      month: '2026-01',
+      platforms: {
+        tripAdvisor:  {count:37,stars:177,fiveStar:34,avg:4.78,breakdown:{'5':34,'4':0,'3':1,'2':2,'1':0}},
+        googleMaps:   {count:4, stars:16, fiveStar:3, avg:4,   breakdown:{'5':3, '4':0,'3':0,'2':0,'1':1}},
+        getYourGuide: {count:8, stars:40, fiveStar:8, avg:5,   breakdown:{'5':8, '4':0,'3':0,'2':0,'1':0}},
+        civitatis:    {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},
+        expedia:      {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},
+        atmosRewards: {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},
+        bookingCom:   {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}}
+      },
+      totalReviews:49, totalStars:233, combinedAvg:4.76, totalBonus:200, estimated:true
+    },
+    {
+      month: '2026-02',
+      platforms: {
+        tripAdvisor:  {count:22,stars:99, fiveStar:18,avg:4.5, breakdown:{'5':18,'4':1,'3':1,'2':0,'1':2}},
+        googleMaps:   {count:19,stars:95, fiveStar:19,avg:5,   breakdown:{'5':19,'4':0,'3':0,'2':0,'1':0}},
+        getYourGuide: {count:21,stars:90, fiveStar:14,avg:4.29,breakdown:{'5':14,'4':3,'3':1,'2':2,'1':1}},
+        civitatis:    {count:1, stars:2,  fiveStar:0, avg:2,   breakdown:{'5':0,'4':0,'3':0,'2':1,'1':0}},
+        expedia:      {count:3, stars:9,  fiveStar:0, avg:3,   breakdown:{'5':0,'4':0,'3':3,'2':0,'1':0}},
+        atmosRewards: {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},
+        bookingCom:   {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}}
+      },
+      totalReviews:66, totalStars:295, combinedAvg:4.47, totalBonus:280, estimated:true
+    },
+    {
+      month: '2026-03',
+      platforms: {
+        tripAdvisor:  {count:66,stars:300,fiveStar:50,avg:4.55,breakdown:{'5':50,'4':10,'3':2,'2':0,'1':4}},
+        googleMaps:   {count:23,stars:107,fiveStar:21,avg:4.65,breakdown:{'5':21,'4':0,'3':0,'2':0,'1':2}},
+        getYourGuide: {count:25,stars:105,fiveStar:16,avg:4.2, breakdown:{'5':16,'4':3,'3':3,'2':1,'1':2}},
+        civitatis:    {count:1, stars:5,  fiveStar:1, avg:5,   breakdown:{'5':1,'4':0,'3':0,'2':0,'1':0}},
+        expedia:      {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},
+        atmosRewards: {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},
+        bookingCom:   {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}}
+      },
+      totalReviews:115, totalStars:517, combinedAvg:4.5, totalBonus:460, estimated:true
+    },
+    {
+      month: '2026-04',
+      platforms: {
+        tripAdvisor:  {count:14,stars:55,fiveStar:8,avg:3.93,breakdown:{'5':8,'4':1,'3':3,'2':0,'1':2}},
+        googleMaps:   {count:1, stars:1, fiveStar:0,avg:1,   breakdown:{'5':0,'4':0,'3':0,'2':0,'1':1}},
+        getYourGuide: {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},
+        civitatis:    {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},
+        expedia:      {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},
+        atmosRewards: {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},
+        bookingCom:   {count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}}
+      },
+      totalReviews:15, totalStars:56, combinedAvg:3.73, totalBonus:40, estimated:true
+    },
+    // Empty placeholder months for the full-year dashboard chart
+    {month:'2026-06',platforms:{tripAdvisor:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},googleMaps:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},getYourGuide:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},civitatis:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},expedia:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},atmosRewards:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},bookingCom:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}}},totalReviews:0,totalStars:0,combinedAvg:null,totalBonus:0,estimated:false},
+    {month:'2026-07',platforms:{tripAdvisor:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},googleMaps:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},getYourGuide:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},civitatis:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},expedia:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},atmosRewards:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},bookingCom:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}}},totalReviews:0,totalStars:0,combinedAvg:null,totalBonus:0,estimated:false},
+    {month:'2026-08',platforms:{tripAdvisor:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},googleMaps:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},getYourGuide:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},civitatis:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},expedia:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},atmosRewards:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},bookingCom:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}}},totalReviews:0,totalStars:0,combinedAvg:null,totalBonus:0,estimated:false},
+    {month:'2026-09',platforms:{tripAdvisor:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},googleMaps:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},getYourGuide:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},civitatis:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},expedia:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},atmosRewards:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},bookingCom:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}}},totalReviews:0,totalStars:0,combinedAvg:null,totalBonus:0,estimated:false},
+    {month:'2026-10',platforms:{tripAdvisor:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},googleMaps:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},getYourGuide:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},civitatis:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},expedia:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},atmosRewards:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},bookingCom:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}}},totalReviews:0,totalStars:0,combinedAvg:null,totalBonus:0,estimated:false},
+    {month:'2026-11',platforms:{tripAdvisor:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},googleMaps:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},getYourGuide:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},civitatis:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},expedia:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},atmosRewards:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},bookingCom:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}}},totalReviews:0,totalStars:0,combinedAvg:null,totalBonus:0,estimated:false},
+    {month:'2026-12',platforms:{tripAdvisor:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},googleMaps:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},getYourGuide:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},civitatis:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},expedia:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},atmosRewards:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}},bookingCom:{count:0,stars:0,fiveStar:0,avg:null,breakdown:{'5':0,'4':0,'3':0,'2':0,'1':0}}},totalReviews:0,totalStars:0,combinedAvg:null,totalBonus:0,estimated:false}
+  ],
+  // Per-guide 5-star counts for Jan-Apr ONLY (May onward from weekly entries)
+  byGuide: [
+    {name:'Jessica Verrault',  monthlyFiveStar:{'2026-01':7,'2026-02':2,'2026-03':1}},
+    {name:'Shannon Williams',  monthlyFiveStar:{'2026-01':4,'2026-03':5}},
+    {name:'Ryan Stebbins',     monthlyFiveStar:{'2026-02':2,'2026-03':3}},
+    {name:'Dylan Berggren',    monthlyFiveStar:{'2026-03':5,'2026-04':1}},
+    {name:'Tyler Trainor',     monthlyFiveStar:{'2026-01':1,'2026-02':7}},
+    {name:'Greg McDaniel',     monthlyFiveStar:{'2026-02':2,'2026-03':3}},
+    {name:'Jodi Bailey',       monthlyFiveStar:{}},
+    {name:'RIpley Caldwell',   monthlyFiveStar:{}},
+    {name:'Sierra Baker',      monthlyFiveStar:{}},
+    {name:'Milo Pranther',     monthlyFiveStar:{}},
+    {name:'Rich Cohen',        monthlyFiveStar:{}},
+    {name:'John Kane',         monthlyFiveStar:{}},
+    {name:'Wesley Campbell',   monthlyFiveStar:{}},
+    {name:'Sullivan Bogardus', monthlyFiveStar:{}},
+    {name:'Pepper Burrel',     monthlyFiveStar:{}},
+    {name:'Gina Sliger',       monthlyFiveStar:{}}
+  ]
+};
 
 function getConfig() {
   var props = PropertiesService.getScriptProperties();
@@ -330,27 +422,14 @@ function util_AddManualWeek() {
   Logger.log('║   util_AddManualWeek: ' + WEEK_LABEL.substring(0, 19) + '  ║');
   Logger.log('╚════════════════════════════════════════════╝');
 
-  // Always load GitHub baseline for historical monthly + byGuide (Jan-Apr preservation)
-  var baseline = null;
-  var baselineUrl = 'https://raw.githubusercontent.com/' + C.GITHUB_USERNAME + '/' + C.GITHUB_REPO + '/main/data.json';
-  Logger.log('📡 Fetching GitHub baseline...');
-  try {
-    var baseResp = fetchWithRetry(baselineUrl, { muteHttpExceptions: true });
-    if (baseResp.getResponseCode() === 200) {
-      baseline = JSON.parse(baseResp.getContentText());
-      Logger.log('   ✓ Baseline: ' + (baseline.history && baseline.history.weekly ? baseline.history.weekly.length : 0) + ' weekly entries');
-    }
-  } catch(e) { Logger.log('   ⚠  Baseline fetch error: ' + e.message); }
+  // Read Drive for accumulated weekly entries
+  var driveData = readDashboardDataFromDrive() || {};
+  var driveWeekly = driveData.history && driveData.history.weekly ? driveData.history.weekly : [];
+  Logger.log('✓ Drive: ' + driveWeekly.length + ' weekly entries loaded');
 
-  // Read Drive for any additional weekly entries
-  var driveData = readDashboardDataFromDrive();
-
-  // Merge: baseline weekly + Drive weekly (Drive wins on conflict)
+  // Merge Drive entries + manual week (deduped by weekLabel)
   var weeklyMap = {};
-  ((baseline && baseline.history && baseline.history.weekly) || []).forEach(function(w) { weeklyMap[w.weekLabel] = w; });
-  ((driveData  && driveData.history  && driveData.history.weekly)  || []).forEach(function(w) { weeklyMap[w.weekLabel] = w; });
-
-  // Add/replace the manual week
+  driveWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
   weeklyMap[WEEK_LABEL] = {
     weekLabel: WEEK_LABEL,
     startDate: START_DATE,
@@ -369,17 +448,15 @@ function util_AddManualWeek() {
   var allWeekly = Object.keys(weeklyMap).map(function(k) { return weeklyMap[k]; });
   allWeekly.sort(function(a, b) { return (a.startDate||'') < (b.startDate||'') ? -1 : 1; });
 
-  var priorMonthly = (baseline && baseline.history && baseline.history.monthly) || (driveData && driveData.history && driveData.history.monthly) || [];
-  var priorByGuide = (baseline && baseline.history && baseline.history.byGuide) || (driveData && driveData.history && driveData.history.byGuide) || [];
-
-  // Build full data object from scratch (same structure as buildDashboardJSON)
-  var prior = baseline || driveData || {};
-  prior.history = { monthly: [], weekly: allWeekly, byGuide: [] };
-  if ((baseline && baseline.history && baseline.history.notes) || (driveData && driveData.history && driveData.history.notes)) {
-    prior.history.notes = (baseline && baseline.history && baseline.history.notes) || (driveData && driveData.history && driveData.history.notes);
-  }
-  rebuildHistoryAggregates(prior.history, priorMonthly, priorByGuide);
-  prior.generatedAt = new Date().toISOString();
+  // Rebuild using embedded Jan-Apr baseline as permanent historical floor
+  var prior = { generatedAt: new Date().toISOString() };
+  prior.history = {
+    monthly: [],
+    weekly: allWeekly,
+    byGuide: [],
+    notes: 'Jan-Apr 2026 from Reviews Tracker. May onward from Apps Script. Bonus: $10 GMaps 5★, $5 TA 5★.'
+  };
+  rebuildHistoryAggregates(prior.history, HISTORY_BASELINE_2026.monthly, HISTORY_BASELINE_2026.byGuide);
 
   var finalJson = JSON.stringify(prior, null, 2);
   var driveId = writeDashboardDataToDrive(finalJson);
@@ -679,17 +756,8 @@ function runWeeklyReport() {
 
     Logger.log('📊 Building dashboard data.json with accumulated history...');
     var dashboardJSON = buildDashboardJSON(metrics, running, win, C);
-    var driveFileId = writeDashboardDataToDrive(dashboardJSON);
-    Logger.log('   ✓ Saved to Drive');
-    Logger.log('');
-
-    Logger.log('💾 Pushing dashboard data.json to GitHub (canonical database)...');
-    try {
-      pushToGitHub(dashboardJSON, C);
-      Logger.log('   ✓ data.json pushed to GitHub — next run will load this as baseline');
-    } catch (e) {
-      Logger.log('   ⚠  GitHub push failed (non-fatal): ' + e.message);
-    }
+    writeDashboardDataToDrive(dashboardJSON);
+    Logger.log('   ✓ Saved to Drive (weekly entries accumulated)');
     Logger.log('');
 
     Logger.log('📧 Emailing dashboard JSON as attachment + team draft...');
@@ -1321,40 +1389,18 @@ function writeDashboardDataToDrive(jsonContent) {
 
 // Builds the FULL dashboard JSON: current week + accumulated history.
 //
-// v4.13: always fetches the GitHub baseline as the primary source for historical
-// monthly and byGuide data (Jan-Apr). Merges baseline weekly entries with any
-// additional Drive entries, then adds the new week. This means Jan-Apr is NEVER
-// lost regardless of Drive state — the GitHub data.json is the canonical database.
+// v4.14: Jan-Apr historical data comes from HISTORY_BASELINE_2026 (hardcoded above).
+// Weekly entries accumulate in Drive. Each run: read Drive weekly entries → add new
+// week → rebuild monthly+byGuide using the embedded baseline → save to Drive → email.
+// No GitHub needed. Jan-Apr can never be lost because they're in the code itself.
 function buildDashboardJSON(metrics, runningState, win, C) {
-  // 1. Fetch GitHub baseline — primary source for historical data
-  var baseline = null;
-  var baselineUrl = 'https://raw.githubusercontent.com/' + C.GITHUB_USERNAME + '/' + C.GITHUB_REPO + '/main/data.json';
-  Logger.log('   📡 Fetching GitHub baseline for historical data...');
-  try {
-    var baseResp = fetchWithRetry(baselineUrl, { muteHttpExceptions: true });
-    if (baseResp.getResponseCode() === 200) {
-      baseline = JSON.parse(baseResp.getContentText());
-      var bm = (baseline.history && baseline.history.monthly ? baseline.history.monthly : []).filter(function(m){return m.totalReviews>0;}).length;
-      var bw = (baseline.history && baseline.history.weekly  ? baseline.history.weekly  : []).length;
-      Logger.log('   ✓ Baseline loaded: ' + bm + ' months with data, ' + bw + ' weekly entries');
-    } else {
-      Logger.log('   ⚠  GitHub baseline HTTP ' + baseResp.getResponseCode() + ' — falling back to Drive-only history');
-    }
-  } catch(e) {
-    Logger.log('   ⚠  GitHub baseline error: ' + e.message + ' — falling back to Drive-only history');
-  }
+  // 1. Read Drive for accumulated weekly entries
+  var driveData = readDashboardDataFromDrive() || {};
+  var driveWeekly = driveData.history && driveData.history.weekly ? driveData.history.weekly : [];
 
-  // 2. Read Drive for any entries accumulated since last GitHub push
-  var driveData = readDashboardDataFromDrive();
-
-  // 3. Merge weekly entries from baseline + Drive (Drive wins on weekLabel conflict)
+  // 2. Merge Drive weekly entries + current week (deduped by weekLabel)
   var weeklyMap = {};
-  var baselineWeekly = baseline && baseline.history && baseline.history.weekly ? baseline.history.weekly : [];
-  var driveWeekly    = driveData  && driveData.history  && driveData.history.weekly  ? driveData.history.weekly  : [];
-  baselineWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
-  driveWeekly.forEach(function(w)    { weeklyMap[w.weekLabel] = w; });
-
-  // 4. Add/replace current week
+  driveWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
   weeklyMap[win.weekLabel] = {
     weekLabel: win.weekLabel,
     startDate: win.startDateStr,
@@ -1369,22 +1415,16 @@ function buildDashboardJSON(metrics, runningState, win, C) {
     guides: metrics.guideStats.filter(function(g) { return g.name !== 'UNASSIGNED'; })
   };
 
-  // Sort by startDate ascending
   var allWeekly = Object.keys(weeklyMap).map(function(k) { return weeklyMap[k]; });
   allWeekly.sort(function(a, b) {
-    var sa = a.startDate || '', sb = b.startDate || '';
-    return sa < sb ? -1 : sa > sb ? 1 : 0;
+    return (a.startDate || '') < (b.startDate || '') ? -1 : 1;
   });
-  Logger.log('   ✓ Total weekly entries after merge: ' + allWeekly.length);
+  Logger.log('   ✓ Weekly entries in Drive + new week: ' + allWeekly.length);
 
-  // 5. Rebuild history from merged weekly entries, using baseline as historical source
-  var priorMonthly = baseline && baseline.history && baseline.history.monthly ? baseline.history.monthly : (driveData && driveData.history && driveData.history.monthly ? driveData.history.monthly : []);
-  var priorByGuide = baseline && baseline.history && baseline.history.byGuide ? baseline.history.byGuide : (driveData && driveData.history && driveData.history.byGuide ? driveData.history.byGuide : []);
-  var historyNotes = (baseline && baseline.history && baseline.history.notes) || (driveData && driveData.history && driveData.history.notes) || '';
-
+  // 3. Rebuild history using embedded Jan-Apr baseline as permanent floor
   var history = { monthly: [], weekly: allWeekly, byGuide: [] };
-  if (historyNotes) history.notes = historyNotes;
-  rebuildHistoryAggregates(history, priorMonthly, priorByGuide);
+  history.notes = 'Jan-Apr 2026 from Reviews Tracker. May onward from Apps Script (Apify). Bonus: $10 GMaps 5★, $5 TA 5★.';
+  rebuildHistoryAggregates(history, HISTORY_BASELINE_2026.monthly, HISTORY_BASELINE_2026.byGuide);
 
   // Current week summary (for current.* block)
   var current = {
