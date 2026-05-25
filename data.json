@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-19T12:00:00.000Z",
+  "generatedAt": "2026-05-25T04:44:09.183Z",
   "year": 2026,
-  "weekLabel": "May 10 – May 16, 2026",
+  "weekLabel": "May 17 – May 23, 2026",
   "platforms": [
     { "key": "tripAdvisor",  "displayName": "TripAdvisor",   "color": "#a78bfa" },
     { "key": "googleMaps",   "displayName": "Google Maps",   "color": "#00d4a8" },
@@ -19,84 +19,48 @@
   ],
   "ytd2026": {
     "byPlatform": {
-      "tripAdvisor": {
-        "displayName": "TripAdvisor", "color": "#a78bfa",
-        "count": 144, "stars": 648, "fiveStar": 110, "avg": 4.5
-      },
-      "googleMaps": {
-        "displayName": "Google Maps", "color": "#00d4a8",
-        "count": 50, "stars": 234, "fiveStar": 43, "avg": 4.68
-      },
-      "getYourGuide": {
-        "displayName": "GetYourGuide", "color": "#ffa657",
-        "count": 54, "stars": 235, "fiveStar": 38, "avg": 4.35
-      },
-      "civitatis": {
-        "displayName": "Civitatis", "color": "#ff5470",
-        "count": 2, "stars": 7, "fiveStar": 1, "avg": 3.5
-      },
-      "expedia": {
-        "displayName": "Expedia", "color": "#60a5fa",
-        "count": 3, "stars": 9, "fiveStar": 0, "avg": 3
-      },
-      "atmosRewards": {
-        "displayName": "Atmos Rewards", "color": "#ffd166",
-        "count": 0, "stars": 0, "fiveStar": 0, "avg": null
-      },
-      "bookingCom": {
-        "displayName": "Booking.com", "color": "#10b981",
-        "count": 0, "stars": 0, "fiveStar": 0, "avg": null
-      }
+      "tripAdvisor":  { "displayName": "TripAdvisor",   "color": "#a78bfa", "count": 145, "stars": 653,   "fiveStar": 110, "avg": 4.5 },
+      "googleMaps":   { "displayName": "Google Maps",   "color": "#00d4a8", "count": 53,  "stars": 248.1, "fiveStar": 43,  "avg": 4.68 },
+      "getYourGuide": { "displayName": "GetYourGuide",  "color": "#ffa657", "count": 54,  "stars": 235,   "fiveStar": 38,  "avg": 4.35 },
+      "civitatis":    { "displayName": "Civitatis",     "color": "#ff5470", "count": 2,   "stars": 7,     "fiveStar": 1,   "avg": 3.5 },
+      "expedia":      { "displayName": "Expedia",       "color": "#60a5fa", "count": 3,   "stars": 9,     "fiveStar": 0,   "avg": 3 },
+      "atmosRewards": { "displayName": "Atmos Rewards", "color": "#ffd166", "count": 0,   "stars": 0,     "fiveStar": 0,   "avg": null },
+      "bookingCom":   { "displayName": "Booking.com",   "color": "#10b981", "count": 0,   "stars": 0,     "fiveStar": 0,   "avg": null }
     },
-    "combined": {
-      "count": 253, "stars": 1133, "fiveStar": 192, "avg": 4.48, "totalBonus": 980
-    },
+    "combined": { "count": 257, "stars": 1152.1, "fiveStar": 192, "avg": 4.48, "totalBonus": 980 },
     "source": "Jan–Apr from Reviews Tracker spreadsheet; May onward from Apps Script (Apify scrape)."
   },
   "current": {
-    "weekLabel": "May 10 – May 16, 2026",
+    "weekLabel": "May 17 – May 23, 2026",
     "summary": {
-      "totalReviews": 2,
-      "gmapsCount": 1,
-      "gmapsAvg": "5.0",
-      "taCount": 1,
-      "taAvg": "1.0",
-      "combinedAvg": "3.0",
-      "totalBonus": 20
+      "totalReviews": 4, "gmapsCount": 3, "gmapsAvg": "4.7",
+      "taCount": 1, "taAvg": "5.0", "combinedAvg": "4.8", "totalBonus": 30
     },
     "guides": [
-      { "name": "Jodi Bailey",       "gmaps": 1, "ta": 0, "fiveStar": 1, "bonus": 10 },
-      { "name": "RIpley Caldwell",   "gmaps": 1, "ta": 0, "fiveStar": 1, "bonus": 10 },
+      { "name": "Shannon Williams",  "gmaps": 2, "ta": 0, "fiveStar": 2, "bonus": 20 },
+      { "name": "Sierra Baker",      "gmaps": 1, "ta": 0, "fiveStar": 1, "bonus": 10 },
       { "name": "Jessica Verrault",  "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-      { "name": "Shannon Williams",  "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
       { "name": "Ryan Stebbins",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
       { "name": "Dylan Berggren",    "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
+      { "name": "Jodi Bailey",       "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
       { "name": "Tyler Trainor",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
+      { "name": "RIpley Caldwell",   "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
       { "name": "Milo Pranther",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
       { "name": "Rich Cohen",        "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
       { "name": "John Kane",         "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-      { "name": "Sierra Baker",      "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
       { "name": "Wesley Campbell",   "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
       { "name": "Sullivan Bogardus", "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
       { "name": "Pepper Burrel",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
       { "name": "Greg McDaniel",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
       { "name": "Gina Sliger",       "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 }
     ],
-    "lowRatings": [
-      {
-        "guide": "UNASSIGNED",
-        "rating": 1,
-        "platform": "tripadvisor",
-        "text": "It was horrible and tragedy full experience. \nDriver saved tea / coffee / water bottle and snakes what ch were supposed to be served to us. There was NO facility of these things on the way of 200 miles (Appx).. \nThe van was totally third class and outdated. Each and every part of the body of the van was shouting and noising. The interior was totally miser and even safety handles were also not fixed. The space between rows and seats were most uncomfortable. All 8 passengers were Senior Citizens and experienced great physical difficulties. \nThis trip was NOT a pleasant tour but a terrible long ride. \n\nI think I will never recommend to anyone.\n\nSorry."
-      }
-    ]
+    "lowRatings": []
   },
   "allTime": {
-    "googleMaps":  { "count": 100, "avg": "4.54" },
-    "tripAdvisor": { "count": 100, "avg": "4.55" },
-    "combined":    { "count": 200, "avg": "4.54" },
-    "averageRating": "4.54",
-    "totalReviews": 200
+    "googleMaps":  { "count": 103, "avg": "4.54" },
+    "tripAdvisor": { "count": 101, "avg": "4.55" },
+    "combined":    { "count": 204, "avg": "4.55" },
+    "averageRating": "4.55", "totalReviews": 204
   },
   "history": {
     "monthly": [
@@ -155,173 +119,62 @@
       {
         "month": "2026-05",
         "platforms": {
-          "tripAdvisor":  { "count": 5,  "stars": 17,  "fiveStar": 0,  "avg": 3.4,  "breakdown": {"1":0,"2":0,"3":0,"4":0,"5":0} },
-          "googleMaps":   { "count": 3,  "stars": 15,  "fiveStar": 0,  "avg": 5,    "breakdown": {"1":0,"2":0,"3":0,"4":0,"5":0} },
-          "getYourGuide": { "count": 0,  "stars": 0,   "fiveStar": 0,  "avg": null, "breakdown": {"1":0,"2":0,"3":0,"4":0,"5":0} },
-          "civitatis":    { "count": 0,  "stars": 0,   "fiveStar": 0,  "avg": null, "breakdown": {"1":0,"2":0,"3":0,"4":0,"5":0} },
-          "expedia":      { "count": 0,  "stars": 0,   "fiveStar": 0,  "avg": null, "breakdown": {"1":0,"2":0,"3":0,"4":0,"5":0} },
-          "atmosRewards": { "count": 0,  "stars": 0,   "fiveStar": 0,  "avg": null, "breakdown": {"1":0,"2":0,"3":0,"4":0,"5":0} },
-          "bookingCom":   { "count": 0,  "stars": 0,   "fiveStar": 0,  "avg": null, "breakdown": {"1":0,"2":0,"3":0,"4":0,"5":0} }
+          "tripAdvisor":  { "count": 6, "stars": 22,   "fiveStar": 0, "avg": 3.67, "breakdown": {"1":0,"2":0,"3":0,"4":0,"5":0} },
+          "googleMaps":   { "count": 6, "stars": 29.1, "fiveStar": 0, "avg": 4.85, "breakdown": {"1":0,"2":0,"3":0,"4":0,"5":0} },
+          "getYourGuide": { "count": 0, "stars": 0,    "fiveStar": 0, "avg": null, "breakdown": {"1":0,"2":0,"3":0,"4":0,"5":0} },
+          "civitatis":    { "count": 0, "stars": 0,    "fiveStar": 0, "avg": null, "breakdown": {"1":0,"2":0,"3":0,"4":0,"5":0} },
+          "expedia":      { "count": 0, "stars": 0,    "fiveStar": 0, "avg": null, "breakdown": {"1":0,"2":0,"3":0,"4":0,"5":0} },
+          "atmosRewards": { "count": 0, "stars": 0,    "fiveStar": 0, "avg": null, "breakdown": {"1":0,"2":0,"3":0,"4":0,"5":0} },
+          "bookingCom":   { "count": 0, "stars": 0,    "fiveStar": 0, "avg": null, "breakdown": {"1":0,"2":0,"3":0,"4":0,"5":0} }
         },
-        "totalReviews": 8, "totalStars": 32, "combinedAvg": 4, "totalBonus": 65, "estimated": false
+        "totalReviews": 12, "totalStars": 51.1, "combinedAvg": 4.26, "totalBonus": 95, "estimated": false
       },
-      {
-        "month": "2026-06",
-        "platforms": {
-          "tripAdvisor": {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "googleMaps":  {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "getYourGuide":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "civitatis":   {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "expedia":     {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "atmosRewards":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "bookingCom":  {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}}
-        },
-        "totalReviews": 0, "totalStars": 0, "combinedAvg": null, "totalBonus": 0, "estimated": false
-      },
-      {
-        "month": "2026-07",
-        "platforms": {
-          "tripAdvisor": {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "googleMaps":  {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "getYourGuide":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "civitatis":   {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "expedia":     {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "atmosRewards":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "bookingCom":  {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}}
-        },
-        "totalReviews": 0, "totalStars": 0, "combinedAvg": null, "totalBonus": 0, "estimated": false
-      },
-      {
-        "month": "2026-08",
-        "platforms": {
-          "tripAdvisor": {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "googleMaps":  {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "getYourGuide":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "civitatis":   {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "expedia":     {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "atmosRewards":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "bookingCom":  {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}}
-        },
-        "totalReviews": 0, "totalStars": 0, "combinedAvg": null, "totalBonus": 0, "estimated": false
-      },
-      {
-        "month": "2026-09",
-        "platforms": {
-          "tripAdvisor": {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "googleMaps":  {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "getYourGuide":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "civitatis":   {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "expedia":     {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "atmosRewards":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "bookingCom":  {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}}
-        },
-        "totalReviews": 0, "totalStars": 0, "combinedAvg": null, "totalBonus": 0, "estimated": false
-      },
-      {
-        "month": "2026-10",
-        "platforms": {
-          "tripAdvisor": {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "googleMaps":  {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "getYourGuide":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "civitatis":   {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "expedia":     {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "atmosRewards":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "bookingCom":  {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}}
-        },
-        "totalReviews": 0, "totalStars": 0, "combinedAvg": null, "totalBonus": 0, "estimated": false
-      },
-      {
-        "month": "2026-11",
-        "platforms": {
-          "tripAdvisor": {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "googleMaps":  {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "getYourGuide":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "civitatis":   {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "expedia":     {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "atmosRewards":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "bookingCom":  {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}}
-        },
-        "totalReviews": 0, "totalStars": 0, "combinedAvg": null, "totalBonus": 0, "estimated": false
-      },
-      {
-        "month": "2026-12",
-        "platforms": {
-          "tripAdvisor": {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "googleMaps":  {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "getYourGuide":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "civitatis":   {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "expedia":     {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "atmosRewards":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},
-          "bookingCom":  {"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}}
-        },
-        "totalReviews": 0, "totalStars": 0, "combinedAvg": null, "totalBonus": 0, "estimated": false
-      }
+      { "month": "2026-06", "platforms": {"tripAdvisor":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"googleMaps":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"getYourGuide":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"civitatis":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"expedia":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"atmosRewards":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"bookingCom":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}}}, "totalReviews": 0, "totalStars": 0, "combinedAvg": null, "totalBonus": 0, "estimated": false },
+      { "month": "2026-07", "platforms": {"tripAdvisor":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"googleMaps":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"getYourGuide":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"civitatis":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"expedia":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"atmosRewards":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"bookingCom":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}}}, "totalReviews": 0, "totalStars": 0, "combinedAvg": null, "totalBonus": 0, "estimated": false },
+      { "month": "2026-08", "platforms": {"tripAdvisor":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"googleMaps":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"getYourGuide":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"civitatis":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"expedia":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"atmosRewards":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"bookingCom":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}}}, "totalReviews": 0, "totalStars": 0, "combinedAvg": null, "totalBonus": 0, "estimated": false },
+      { "month": "2026-09", "platforms": {"tripAdvisor":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"googleMaps":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"getYourGuide":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"civitatis":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"expedia":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"atmosRewards":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"bookingCom":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}}}, "totalReviews": 0, "totalStars": 0, "combinedAvg": null, "totalBonus": 0, "estimated": false },
+      { "month": "2026-10", "platforms": {"tripAdvisor":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"googleMaps":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"getYourGuide":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"civitatis":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"expedia":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"atmosRewards":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"bookingCom":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}}}, "totalReviews": 0, "totalStars": 0, "combinedAvg": null, "totalBonus": 0, "estimated": false },
+      { "month": "2026-11", "platforms": {"tripAdvisor":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"googleMaps":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"getYourGuide":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"civitatis":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"expedia":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"atmosRewards":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"bookingCom":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}}}, "totalReviews": 0, "totalStars": 0, "combinedAvg": null, "totalBonus": 0, "estimated": false },
+      { "month": "2026-12", "platforms": {"tripAdvisor":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"googleMaps":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"getYourGuide":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"civitatis":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"expedia":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"atmosRewards":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}},"bookingCom":{"count":0,"stars":0,"fiveStar":0,"avg":null,"breakdown":{"1":0,"2":0,"3":0,"4":0,"5":0}}}, "totalReviews": 0, "totalStars": 0, "combinedAvg": null, "totalBonus": 0, "estimated": false }
     ],
     "weekly": [
       {
-        "weekLabel": "May 10 – May 16, 2026",
-        "startDate": "2026-05-10",
-        "endDate": "2026-05-16",
-        "timestamp": "2026-05-19T03:18:15.867Z",
-        "platforms": {
-          "googleMaps":  { "count": 1, "avg": 5, "fiveStar": 0 },
-          "tripAdvisor": { "count": 1, "avg": 1, "fiveStar": 0 }
-        },
-        "totalReviews": 2,
-        "totalBonus": 20,
+        "weekLabel": "May 3 – May 9, 2026",
+        "startDate": "2026-05-03", "endDate": "2026-05-09",
+        "timestamp": "2026-05-19T03:18:15.855Z",
+        "platforms": { "googleMaps": { "count": 2, "avg": 5, "fiveStar": 0 }, "tripAdvisor": { "count": 4, "avg": 4, "fiveStar": 0 } },
+        "totalReviews": 6, "totalBonus": 45,
         "guides": [
-          { "name": "Jodi Bailey",       "gmaps": 1, "ta": 0, "fiveStar": 1, "bonus": 10 },
-          { "name": "RIpley Caldwell",   "gmaps": 1, "ta": 0, "fiveStar": 1, "bonus": 10 },
-          { "name": "Jessica Verrault",  "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Shannon Williams",  "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Ryan Stebbins",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Dylan Berggren",    "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Tyler Trainor",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Milo Pranther",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Rich Cohen",        "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "John Kane",         "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Sierra Baker",      "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Wesley Campbell",   "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Sullivan Bogardus", "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Pepper Burrel",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Greg McDaniel",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Gina Sliger",       "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 }
+          { "name": "Shannon Williams", "gmaps": 2, "ta": 2, "fiveStar": 4, "bonus": 30 },
+          { "name": "Dylan Berggren",   "gmaps": 1, "ta": 1, "fiveStar": 2, "bonus": 15 }
         ]
       },
       {
-        "weekLabel": "May 3 – May 9, 2026",
-        "startDate": "2026-05-03",
-        "endDate": "2026-05-09",
-        "timestamp": "2026-05-19T03:18:15.855Z",
-        "platforms": {
-          "googleMaps":  { "count": 2, "avg": 5, "fiveStar": 0 },
-          "tripAdvisor": { "count": 4, "avg": 4, "fiveStar": 0 }
-        },
-        "totalReviews": 6,
-        "totalBonus": 45,
+        "weekLabel": "May 10 – May 16, 2026",
+        "startDate": "2026-05-10", "endDate": "2026-05-16",
+        "timestamp": "2026-05-19T03:18:15.867Z",
+        "platforms": { "googleMaps": { "count": 1, "avg": 5, "fiveStar": 0 }, "tripAdvisor": { "count": 1, "avg": 1, "fiveStar": 0 } },
+        "totalReviews": 2, "totalBonus": 20,
         "guides": [
-          { "name": "Shannon Williams",  "gmaps": 2, "ta": 2, "fiveStar": 4, "bonus": 30 },
-          { "name": "Dylan Berggren",    "gmaps": 1, "ta": 1, "fiveStar": 2, "bonus": 15 },
-          { "name": "Jessica Verrault",  "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Ryan Stebbins",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Jodi Bailey",       "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Tyler Trainor",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "RIpley Caldwell",   "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Milo Pranther",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Rich Cohen",        "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "John Kane",         "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Sierra Baker",      "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Wesley Campbell",   "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Sullivan Bogardus", "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Pepper Burrel",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Greg McDaniel",     "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 },
-          { "name": "Gina Sliger",       "gmaps": 0, "ta": 0, "fiveStar": 0, "bonus": 0 }
+          { "name": "Jodi Bailey",     "gmaps": 1, "ta": 0, "fiveStar": 1, "bonus": 10 },
+          { "name": "RIpley Caldwell", "gmaps": 1, "ta": 0, "fiveStar": 1, "bonus": 10 }
+        ]
+      },
+      {
+        "weekLabel": "May 17 – May 23, 2026",
+        "startDate": "2026-05-17", "endDate": "2026-05-23",
+        "timestamp": "2026-05-25T04:44:09.182Z",
+        "platforms": { "googleMaps": { "count": 3, "avg": 4.7, "fiveStar": 0 }, "tripAdvisor": { "count": 1, "avg": 5, "fiveStar": 0 } },
+        "totalReviews": 4, "totalBonus": 30,
+        "guides": [
+          { "name": "Shannon Williams", "gmaps": 2, "ta": 0, "fiveStar": 2, "bonus": 20 },
+          { "name": "Sierra Baker",     "gmaps": 1, "ta": 0, "fiveStar": 1, "bonus": 10 }
         ]
       }
     ],
     "byGuide": [
       { "name": "Jessica Verrault",  "active": true, "ytdFiveStar": 10, "ytdBonus": 0,  "monthlyFiveStar": { "2026-01": 7, "2026-02": 2, "2026-03": 1 } },
-      { "name": "Shannon Williams",  "active": true, "ytdFiveStar": 13, "ytdBonus": 30, "monthlyFiveStar": { "2026-01": 4, "2026-03": 5, "2026-05": 4 } },
+      { "name": "Shannon Williams",  "active": true, "ytdFiveStar": 15, "ytdBonus": 50, "monthlyFiveStar": { "2026-01": 4, "2026-03": 5, "2026-05": 6 } },
       { "name": "Ryan Stebbins",     "active": true, "ytdFiveStar": 5,  "ytdBonus": 0,  "monthlyFiveStar": { "2026-02": 2, "2026-03": 3 } },
       { "name": "Dylan Berggren",    "active": true, "ytdFiveStar": 8,  "ytdBonus": 15, "monthlyFiveStar": { "2026-03": 5, "2026-04": 1, "2026-05": 2 } },
       { "name": "Jodi Bailey",       "active": true, "ytdFiveStar": 1,  "ytdBonus": 10, "monthlyFiveStar": { "2026-05": 1 } },
@@ -330,13 +183,13 @@
       { "name": "Milo Pranther",     "active": true, "ytdFiveStar": 0,  "ytdBonus": 0,  "monthlyFiveStar": {} },
       { "name": "Rich Cohen",        "active": true, "ytdFiveStar": 0,  "ytdBonus": 0,  "monthlyFiveStar": {} },
       { "name": "John Kane",         "active": true, "ytdFiveStar": 0,  "ytdBonus": 0,  "monthlyFiveStar": {} },
-      { "name": "Sierra Baker",      "active": true, "ytdFiveStar": 0,  "ytdBonus": 0,  "monthlyFiveStar": {} },
+      { "name": "Sierra Baker",      "active": true, "ytdFiveStar": 1,  "ytdBonus": 10, "monthlyFiveStar": { "2026-05": 1 } },
       { "name": "Wesley Campbell",   "active": true, "ytdFiveStar": 0,  "ytdBonus": 0,  "monthlyFiveStar": {} },
       { "name": "Sullivan Bogardus", "active": true, "ytdFiveStar": 0,  "ytdBonus": 0,  "monthlyFiveStar": {} },
       { "name": "Pepper Burrel",     "active": true, "ytdFiveStar": 0,  "ytdBonus": 0,  "monthlyFiveStar": {} },
       { "name": "Greg McDaniel",     "active": true, "ytdFiveStar": 5,  "ytdBonus": 0,  "monthlyFiveStar": { "2026-02": 2, "2026-03": 3 } },
       { "name": "Gina Sliger",       "active": true, "ytdFiveStar": 0,  "ytdBonus": 0,  "monthlyFiveStar": {} }
     ],
-    "notes": "Historical monthly data (Jan–Apr 2026) seeded from team Reviews Tracker. May 2026 onward from Apps Script (Apify scrape). Bonus rule: $10 per Google 5★, $5 per TripAdvisor 5★."
+    "notes": "Jan–Apr 2026 from Reviews Tracker. May 2026 onward from Apps Script (Apify scrape). Bonus rule: $10 per Google 5★, $5 per TripAdvisor 5★."
   }
 }

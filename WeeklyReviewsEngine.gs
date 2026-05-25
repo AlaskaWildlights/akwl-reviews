@@ -1,5 +1,19 @@
 // ============================================================
-// ALASKA WILD LIGHTS — Weekly Reviews Engine v4.12
+// ALASKA WILD LIGHTS — Weekly Reviews Engine v4.13
+//
+// v4.13 — SELF-ACCUMULATING: GitHub data.json is the database
+//   - buildDashboardJSON ALWAYS fetches GitHub data.json as the
+//     historical baseline before building the weekly output.
+//     Jan-Apr history is NEVER lost regardless of Drive state.
+//   - Weekly entries are merged from baseline + Drive (deduped by
+//     weekLabel) so even if Drive is reset, history self-heals.
+//   - rebuildHistoryAggregates now accepts priorByGuide to preserve
+//     per-guide 5-star history for months before weekly tracking
+//     started (Jan-Apr 2026 from manual seeding).
+//   - After each run, the complete dashboard JSON is pushed back to
+//     GitHub data.json — the next week's run picks up full history.
+//   - emailDashboardJSON now sends the JSON as an email attachment.
+//     No manual download step needed — open email → save → upload.
 //
 // v4.12 — NETLIFY DASHBOARD + EMAIL ATTACHMENT WORKFLOW
 //   - buildDashboardJSON: builds the full data.json with accumulated
@@ -316,39 +330,55 @@ function util_AddManualWeek() {
   Logger.log('║   util_AddManualWeek: ' + WEEK_LABEL.substring(0, 19) + '  ║');
   Logger.log('╚════════════════════════════════════════════╝');
 
-  // Load existing Drive data (or GitHub baseline as fallback)
-  var prior = readDashboardDataFromDrive();
-  if (!prior || !prior.history) {
-    Logger.log('📡 Drive empty — loading GitHub baseline...');
-    var baselineUrl = 'https://raw.githubusercontent.com/' + C.GITHUB_USERNAME + '/' + C.GITHUB_REPO + '/main/data.json';
-    var resp = fetchWithRetry(baselineUrl, { muteHttpExceptions: true });
-    prior = (resp.getResponseCode() === 200) ? JSON.parse(resp.getContentText()) : {};
-  } else {
-    Logger.log('✓ Loaded from Drive (' + (prior.history.weekly || []).length + ' weekly entries)');
-  }
+  // Always load GitHub baseline for historical monthly + byGuide (Jan-Apr preservation)
+  var baseline = null;
+  var baselineUrl = 'https://raw.githubusercontent.com/' + C.GITHUB_USERNAME + '/' + C.GITHUB_REPO + '/main/data.json';
+  Logger.log('📡 Fetching GitHub baseline...');
+  try {
+    var baseResp = fetchWithRetry(baselineUrl, { muteHttpExceptions: true });
+    if (baseResp.getResponseCode() === 200) {
+      baseline = JSON.parse(baseResp.getContentText());
+      Logger.log('   ✓ Baseline: ' + (baseline.history && baseline.history.weekly ? baseline.history.weekly.length : 0) + ' weekly entries');
+    }
+  } catch(e) { Logger.log('   ⚠  Baseline fetch error: ' + e.message); }
 
-  prior.history = prior.history || { monthly: [], weekly: [], byGuide: [] };
-  prior.history.weekly = prior.history.weekly || [];
+  // Read Drive for any additional weekly entries
+  var driveData = readDashboardDataFromDrive();
 
-  var entry = {
+  // Merge: baseline weekly + Drive weekly (Drive wins on conflict)
+  var weeklyMap = {};
+  ((baseline && baseline.history && baseline.history.weekly) || []).forEach(function(w) { weeklyMap[w.weekLabel] = w; });
+  ((driveData  && driveData.history  && driveData.history.weekly)  || []).forEach(function(w) { weeklyMap[w.weekLabel] = w; });
+
+  // Add/replace the manual week
+  weeklyMap[WEEK_LABEL] = {
     weekLabel: WEEK_LABEL,
     startDate: START_DATE,
     endDate:   END_DATE,
     timestamp: new Date().toISOString(),
     platforms: {
-      googleMaps:  { count: GMAPS_COUNT, avg: GMAPS_COUNT > 0 ? (GMAPS_FIVESTAR * 5 / GMAPS_COUNT) : 0, fiveStar: GMAPS_FIVESTAR },
-      tripAdvisor: { count: TA_COUNT,    avg: TA_COUNT    > 0 ? (TA_FIVESTAR    * 5 / TA_COUNT)    : 0, fiveStar: TA_FIVESTAR    }
+      googleMaps:  { count: GMAPS_COUNT, avg: GMAPS_COUNT > 0 ? parseFloat((GMAPS_FIVESTAR * 5 / GMAPS_COUNT).toFixed(1)) : 0, fiveStar: GMAPS_FIVESTAR },
+      tripAdvisor: { count: TA_COUNT,    avg: TA_COUNT    > 0 ? parseFloat((TA_FIVESTAR    * 5 / TA_COUNT).toFixed(1))    : 0, fiveStar: TA_FIVESTAR    }
     },
     totalReviews: GMAPS_COUNT + TA_COUNT,
     totalBonus:   GMAPS_FIVESTAR * 10 + TA_FIVESTAR * 5,
     guides: GUIDE_DATA
   };
+  Logger.log('   ✓ Entry set for week: ' + WEEK_LABEL);
 
-  var idx = prior.history.weekly.findIndex(function(w) { return w.weekLabel === WEEK_LABEL; });
-  if (idx >= 0) { prior.history.weekly[idx] = entry; Logger.log('   Replaced existing entry for ' + WEEK_LABEL); }
-  else          { prior.history.weekly.push(entry);   Logger.log('   Added new entry for ' + WEEK_LABEL); }
+  var allWeekly = Object.keys(weeklyMap).map(function(k) { return weeklyMap[k]; });
+  allWeekly.sort(function(a, b) { return (a.startDate||'') < (b.startDate||'') ? -1 : 1; });
 
-  rebuildHistoryAggregates(prior.history, prior.history.monthly);
+  var priorMonthly = (baseline && baseline.history && baseline.history.monthly) || (driveData && driveData.history && driveData.history.monthly) || [];
+  var priorByGuide = (baseline && baseline.history && baseline.history.byGuide) || (driveData && driveData.history && driveData.history.byGuide) || [];
+
+  // Build full data object from scratch (same structure as buildDashboardJSON)
+  var prior = baseline || driveData || {};
+  prior.history = { monthly: [], weekly: allWeekly, byGuide: [] };
+  if ((baseline && baseline.history && baseline.history.notes) || (driveData && driveData.history && driveData.history.notes)) {
+    prior.history.notes = (baseline && baseline.history && baseline.history.notes) || (driveData && driveData.history && driveData.history.notes);
+  }
+  rebuildHistoryAggregates(prior.history, priorMonthly, priorByGuide);
   prior.generatedAt = new Date().toISOString();
 
   var finalJson = JSON.stringify(prior, null, 2);
@@ -647,26 +677,25 @@ function runWeeklyReport() {
     Logger.log('   ✓ Sheets updated');
     Logger.log('');
 
-    Logger.log('💾 Pushing legacy data.json to GitHub (backup)...');
-    var jsonData = generateJSONData(metrics, running, win.weekLabel, C);
-    try {
-      pushToGitHub(jsonData, C);
-      Logger.log('   ✓ Legacy data.json pushed');
-    } catch (e) {
-      Logger.log('   ⚠  GitHub backup push failed (non-fatal): ' + e.message);
-    }
-    Logger.log('');
-
     Logger.log('📊 Building dashboard data.json with accumulated history...');
     var dashboardJSON = buildDashboardJSON(metrics, running, win, C);
     var driveFileId = writeDashboardDataToDrive(dashboardJSON);
     Logger.log('   ✓ Saved to Drive');
     Logger.log('');
 
-    Logger.log('📧 Emailing dashboard JSON link + team draft...');
-    emailDashboardJSON(win.weekLabel, driveFileId, C);
+    Logger.log('💾 Pushing dashboard data.json to GitHub (canonical database)...');
+    try {
+      pushToGitHub(dashboardJSON, C);
+      Logger.log('   ✓ data.json pushed to GitHub — next run will load this as baseline');
+    } catch (e) {
+      Logger.log('   ⚠  GitHub push failed (non-fatal): ' + e.message);
+    }
+    Logger.log('');
+
+    Logger.log('📧 Emailing dashboard JSON as attachment + team draft...');
+    emailDashboardJSON(win.weekLabel, dashboardJSON, C);
     createEmailDraftHTML(metrics, running, win.weekLabel, C);
-    Logger.log('   ✓ Dashboard JSON link emailed + team draft created');
+    Logger.log('   ✓ JSON adjunto enviado + team draft created');
     Logger.log('');
 
     // -------- Everything above succeeded. Persist state LAST so a partial
@@ -1130,12 +1159,18 @@ function getActiveGuides() {
   ];
 }
 
-// Rebuilds history.monthly and history.byGuide from history.weekly. Historical
-// monthly entries (months with no weekly data, e.g. Jan–Apr seeded from
-// data.json) are preserved from priorMonthly. Mutates history in place.
-// Idempotent — safe to call multiple times.
-function rebuildHistoryAggregates(history, priorMonthly) {
+// Rebuilds history.monthly and history.byGuide from history.weekly.
+//
+// priorMonthly — monthly entries for months with no weekly data (e.g. Jan–Apr
+//   seeded from the GitHub baseline). Those months are preserved as-is.
+// priorByGuide — guide entries from the GitHub baseline. monthlyFiveStar for
+//   months NOT covered by any weekly entry is carried over, so Jan–Apr per-guide
+//   5-star history is never lost even though those months have no weekly rows.
+//
+// Mutates history in place. Idempotent — safe to call multiple times.
+function rebuildHistoryAggregates(history, priorMonthly, priorByGuide) {
   priorMonthly = priorMonthly || [];
+  priorByGuide = priorByGuide || [];
   history.weekly = history.weekly || [];
 
   function blankPlatformEntry() {
@@ -1197,9 +1232,30 @@ function rebuildHistoryAggregates(history, priorMonthly) {
   history.monthly = historicalMonthly.concat(Object.keys(computedMonthly).map(function(k) { return computedMonthly[k]; }));
   history.monthly.sort(function(a, b) { return a.month < b.month ? -1 : 1; });
 
-  // Rebuild byGuide from weekly entries
+  // Rebuild byGuide: seed historical months from priorByGuide, then layer in weekly entries.
   history.byGuide = [];
   var byGuideMap = {};
+
+  // Step 1: carry over monthlyFiveStar for months NOT covered by any weekly entry.
+  // This preserves Jan-Apr per-guide 5-star counts even though those months have no
+  // weekly rows (they were manually seeded in the GitHub baseline).
+  priorByGuide.forEach(function(pg) {
+    if (!byGuideMap[pg.name]) {
+      byGuideMap[pg.name] = { name: pg.name, active: pg.active !== false, ytdFiveStar: 0, ytdBonus: 0, monthlyFiveStar: {} };
+      history.byGuide.push(byGuideMap[pg.name]);
+    }
+    var priorMFS = pg.monthlyFiveStar || {};
+    Object.keys(priorMFS).forEach(function(ym) {
+      if (!weeklyMonths[ym]) {  // only keep months that weekly entries don't cover
+        byGuideMap[pg.name].monthlyFiveStar[ym] = priorMFS[ym];
+        byGuideMap[pg.name].ytdFiveStar += priorMFS[ym] || 0;
+      }
+    });
+    // ytdBonus for pre-weekly months (Jan-Apr) was $0 — bonus tracking started with
+    // the weekly script, so nothing to carry over from priorByGuide.ytdBonus.
+  });
+
+  // Step 2: add contributions from every weekly entry.
   history.weekly.forEach(function(w) {
     var ym = w.endDate ? w.endDate.substring(0, 7) : null;
     (w.guides || []).forEach(function(g) {
@@ -1264,9 +1320,71 @@ function writeDashboardDataToDrive(jsonContent) {
 }
 
 // Builds the FULL dashboard JSON: current week + accumulated history.
+//
+// v4.13: always fetches the GitHub baseline as the primary source for historical
+// monthly and byGuide data (Jan-Apr). Merges baseline weekly entries with any
+// additional Drive entries, then adds the new week. This means Jan-Apr is NEVER
+// lost regardless of Drive state — the GitHub data.json is the canonical database.
 function buildDashboardJSON(metrics, runningState, win, C) {
-  var prior = readDashboardDataFromDrive() || {};
-  var history = prior.history || { monthly: [], weekly: [], byGuide: [] };
+  // 1. Fetch GitHub baseline — primary source for historical data
+  var baseline = null;
+  var baselineUrl = 'https://raw.githubusercontent.com/' + C.GITHUB_USERNAME + '/' + C.GITHUB_REPO + '/main/data.json';
+  Logger.log('   📡 Fetching GitHub baseline for historical data...');
+  try {
+    var baseResp = fetchWithRetry(baselineUrl, { muteHttpExceptions: true });
+    if (baseResp.getResponseCode() === 200) {
+      baseline = JSON.parse(baseResp.getContentText());
+      var bm = (baseline.history && baseline.history.monthly ? baseline.history.monthly : []).filter(function(m){return m.totalReviews>0;}).length;
+      var bw = (baseline.history && baseline.history.weekly  ? baseline.history.weekly  : []).length;
+      Logger.log('   ✓ Baseline loaded: ' + bm + ' months with data, ' + bw + ' weekly entries');
+    } else {
+      Logger.log('   ⚠  GitHub baseline HTTP ' + baseResp.getResponseCode() + ' — falling back to Drive-only history');
+    }
+  } catch(e) {
+    Logger.log('   ⚠  GitHub baseline error: ' + e.message + ' — falling back to Drive-only history');
+  }
+
+  // 2. Read Drive for any entries accumulated since last GitHub push
+  var driveData = readDashboardDataFromDrive();
+
+  // 3. Merge weekly entries from baseline + Drive (Drive wins on weekLabel conflict)
+  var weeklyMap = {};
+  var baselineWeekly = baseline && baseline.history && baseline.history.weekly ? baseline.history.weekly : [];
+  var driveWeekly    = driveData  && driveData.history  && driveData.history.weekly  ? driveData.history.weekly  : [];
+  baselineWeekly.forEach(function(w) { weeklyMap[w.weekLabel] = w; });
+  driveWeekly.forEach(function(w)    { weeklyMap[w.weekLabel] = w; });
+
+  // 4. Add/replace current week
+  weeklyMap[win.weekLabel] = {
+    weekLabel: win.weekLabel,
+    startDate: win.startDateStr,
+    endDate:   win.endDateStr,
+    timestamp: new Date().toISOString(),
+    platforms: {
+      googleMaps:  { count: metrics.gmapsCount, avg: parseFloat(metrics.gmapsAvg) || 0, fiveStar: 0 },
+      tripAdvisor: { count: metrics.taCount,    avg: parseFloat(metrics.taAvg)    || 0, fiveStar: 0 }
+    },
+    totalReviews: metrics.combinedCount,
+    totalBonus:   metrics.totalBonus,
+    guides: metrics.guideStats.filter(function(g) { return g.name !== 'UNASSIGNED'; })
+  };
+
+  // Sort by startDate ascending
+  var allWeekly = Object.keys(weeklyMap).map(function(k) { return weeklyMap[k]; });
+  allWeekly.sort(function(a, b) {
+    var sa = a.startDate || '', sb = b.startDate || '';
+    return sa < sb ? -1 : sa > sb ? 1 : 0;
+  });
+  Logger.log('   ✓ Total weekly entries after merge: ' + allWeekly.length);
+
+  // 5. Rebuild history from merged weekly entries, using baseline as historical source
+  var priorMonthly = baseline && baseline.history && baseline.history.monthly ? baseline.history.monthly : (driveData && driveData.history && driveData.history.monthly ? driveData.history.monthly : []);
+  var priorByGuide = baseline && baseline.history && baseline.history.byGuide ? baseline.history.byGuide : (driveData && driveData.history && driveData.history.byGuide ? driveData.history.byGuide : []);
+  var historyNotes = (baseline && baseline.history && baseline.history.notes) || (driveData && driveData.history && driveData.history.notes) || '';
+
+  var history = { monthly: [], weekly: allWeekly, byGuide: [] };
+  if (historyNotes) history.notes = historyNotes;
+  rebuildHistoryAggregates(history, priorMonthly, priorByGuide);
 
   // Current week summary (for current.* block)
   var current = {
@@ -1286,29 +1404,6 @@ function buildDashboardJSON(metrics, runningState, win, C) {
     })
   };
 
-  // Append to history.weekly (one entry per run)
-  history.weekly = history.weekly || [];
-  // Dedupe by weekLabel: replace if already exists
-  var wIdx = history.weekly.findIndex(function(w) { return w.weekLabel === win.weekLabel; });
-  var weeklyEntry = {
-    weekLabel: win.weekLabel,
-    startDate: win.startDateStr,
-    endDate: win.endDateStr,
-    timestamp: new Date().toISOString(),
-    platforms: {
-      googleMaps: { count: metrics.gmapsCount, avg: parseFloat(metrics.gmapsAvg) || 0, fiveStar: 0 },
-      tripAdvisor: { count: metrics.taCount, avg: parseFloat(metrics.taAvg) || 0, fiveStar: 0 }
-    },
-    totalReviews: metrics.combinedCount,
-    totalBonus: metrics.totalBonus,
-    guides: metrics.guideStats.filter(function(g) { return g.name !== 'UNASSIGNED'; })
-  };
-  if (wIdx >= 0) history.weekly[wIdx] = weeklyEntry;
-  else history.weekly.push(weeklyEntry);
-
-  // Rebuild history.monthly + history.byGuide from history.weekly (idempotent).
-  rebuildHistoryAggregates(history, prior.history && prior.history.monthly ? prior.history.monthly : []);
-
   // Build YTD platform totals from history.monthly
   var ytdPlat = {
     tripAdvisor:  { displayName:'TripAdvisor',  color:'#a78bfa', count:0, stars:0, fiveStar:0 },
@@ -1321,7 +1416,7 @@ function buildDashboardJSON(metrics, runningState, win, C) {
   };
   history.monthly.forEach(function(mo) {
     Object.keys(ytdPlat).forEach(function(k) {
-      if (mo.platforms[k]) {
+      if (mo.platforms && mo.platforms[k]) {
         ytdPlat[k].count += mo.platforms[k].count || 0;
         ytdPlat[k].stars += mo.platforms[k].stars || 0;
         ytdPlat[k].fiveStar += mo.platforms[k].fiveStar || 0;
@@ -1374,30 +1469,27 @@ function buildDashboardJSON(metrics, runningState, win, C) {
   return JSON.stringify(data, null, 2);
 }
 
-// Emails a download link for the dashboard data.json stored in Drive.
-function emailDashboardJSON(weekLabel, fileId, C) {
+// Emails the dashboard data.json as an attachment. No manual download needed —
+// open the email, save the attachment, upload it to the dashboard. Done.
+function emailDashboardJSON(weekLabel, dashboardJson, C) {
   var subject = 'AKWL Weekly Reviews — ' + weekLabel;
   var dashUrl = PropertiesService.getScriptProperties().getProperty('DASHBOARD_URL') || '';
-  var downloadUrl = 'https://drive.google.com/uc?export=download&id=' + fileId;
 
-  var body =
-    'Weekly Reviews — ' + weekLabel + '\n\n' +
-    'Descargá el archivo actualizado:\n' +
-    downloadUrl + '\n\n' +
-    (dashUrl ? 'Dashboard: ' + dashUrl + '\n\n' : '') +
-    'Pasos:\n' +
-    '  1. Click el link de arriba → descarga akwl-reviews-data.json\n' +
-    '  2. Abrí el dashboard\n' +
-    '  3. Click "↑ Upload data.json" → seleccioná el archivo\n\n' +
-    'Generado: ' + new Date().toString();
-
+  var blob = Utilities.newBlob(dashboardJson, 'application/json', 'akwl-reviews-data.json');
   MailApp.sendEmail({
     to: C.EMAIL_TO,
     subject: subject,
-    body: body,
+    body: 'Weekly Reviews — ' + weekLabel + '\n\n' +
+          'Adjunto el akwl-reviews-data.json actualizado (historial completo incluido).\n\n' +
+          'Pasos:\n' +
+          '  1. Guardá el archivo adjunto\n' +
+          '  2. Abrí el dashboard' + (dashUrl ? ': ' + dashUrl : '') + '\n' +
+          '  3. Click "↑ Upload data.json" → seleccioná el archivo adjunto\n\n' +
+          'Generado: ' + new Date().toString(),
+    attachments: [blob],
     name: 'Alaska Wild Lights Reviews'
   });
-  Logger.log('   ✓ Link enviado a ' + C.EMAIL_TO);
+  Logger.log('   ✓ JSON adjunto enviado a ' + C.EMAIL_TO);
 }
 
 function pushToGitHub(jsonContent, C) {
