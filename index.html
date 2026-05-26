@@ -132,7 +132,7 @@ footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:0.78rem;
     <span class="pill" id="hero-pill">YTD 2026: —</span>
     <button class="btn" onclick="document.getElementById('upload-input').click()">↑ Upload data.json</button>
     <input type="file" id="upload-input" accept="application/json,.json" style="display:none" onchange="handleUpload(event)">
-    <button class="btn btn-ghost" id="btn-bake" onclick="downloadBakedIndex()" style="display:none">↓ Descargar index.html</button>
+    <button class="btn btn-ghost" id="btn-bake" onclick="downloadBakedIndex()" style="display:none">↓ Download index.html</button>
     <div class="entry">
       <span>Last data entry</span>
       <strong id="last-entry">—</strong>
@@ -165,6 +165,17 @@ footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:0.78rem;
   <h3>Monthly Performance — 2026</h3>
   <div style="color:var(--muted);font-size:0.75rem;margin-bottom:14px">Combined average rating · Target ≥ 4.5★</div>
   <div class="bench-grid" id="bench-grid"></div>
+</div>
+
+<div class="card" id="range-filter-card" style="display:none">
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <span style="font-size:0.8rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Week range</span>
+    <select id="range-from" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:5px;font-size:0.8rem"></select>
+    <span style="color:var(--muted);font-size:0.8rem">to</span>
+    <select id="range-to" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:5px;font-size:0.8rem"></select>
+    <button class="btn btn-ghost" onclick="applyWeekRange()" style="font-size:0.75rem;padding:5px 12px">Apply</button>
+    <button class="btn btn-ghost" onclick="resetWeekRange()" style="font-size:0.75rem;padding:5px 12px">All weeks</button>
+  </div>
 </div>
 
 <div class="card">
@@ -2308,6 +2319,7 @@ let CHARTS = {};
 let STATE = {
   avg: {view:'monthly', platforms:{}},
   count: {view:'monthly', stack:'stacked', platforms:{}},
+  weekRange: {from: null, to: null},
   guides: {view:'ytd'}
 };
 
@@ -2335,7 +2347,7 @@ function handleUpload(e){
       initState();
       render();
       document.getElementById('btn-bake').style.display = '';
-      toast('✓ Datos cargados — click "↓ Descargar index.html" para deployar');
+      toast('✓ Data loaded — click "↓ Download index.html" to deploy');
     }catch(err){ toast('✗ Invalid file: '+err.message, true); }
   };
   r.readAsText(f);
@@ -2350,12 +2362,12 @@ async function downloadBakedIndex(){
       /\/\/ @@BAKED_DATA_START@@[\s\S]*?\/\/ @@BAKED_DATA_END@@/,
       '// @@BAKED_DATA_START@@\n' + newData + '\n// @@BAKED_DATA_END@@'
     );
-    if(updated === src){ toast('✗ No se pudo actualizar — marcadores no encontrados', true); return; }
+    if(updated === src){ toast('✗ Could not update — markers not found', true); return; }
     const blob = new Blob([updated], {type: 'text/html'});
     const a = Object.assign(document.createElement('a'), {href: URL.createObjectURL(blob), download: 'index.html'});
     a.click();
     URL.revokeObjectURL(a.href);
-    toast('✓ index.html descargado — deployalo en Netlify');
+    toast('✓ index.html downloaded — deploy it to Netlify');
   } catch(err) {
     toast('✗ Error: ' + err.message, true);
   }
@@ -2488,7 +2500,15 @@ function getPeriods(stateKey){
       }
     }}];
   }
-  return weekly.map(w => ({label: w.weekLabel || w.label || w.week, key: w.startDate || w.weekLabel || w.week, data: w}));
+  const sorted = [...weekly].sort((a,b) => (a.startDate||a.weekLabel||'') < (b.startDate||b.weekLabel||'') ? -1 : 1);
+  const {from, to} = STATE.weekRange;
+  const filtered = sorted.filter(w => {
+    const k = w.startDate || w.weekLabel || '';
+    if(from && k < from) return false;
+    if(to && k > to) return false;
+    return true;
+  });
+  return (filtered.length ? filtered : sorted).map(w => ({label: w.weekLabel || w.label || w.week, key: w.startDate || w.weekLabel || w.week, data: w}));
 }
 
 function renderAvgChart(){
@@ -2607,6 +2627,39 @@ function renderGuideTable(){
   </tr>`).join('');
 }
 
+function buildWeekRangeSelects(){
+  const weekly = (DATA.history && DATA.history.weekly) || [];
+  if(weekly.length < 2) return;
+  const sorted = [...weekly].sort((a,b) => (a.startDate||a.weekLabel||'') < (b.startDate||b.weekLabel||'') ? -1 : 1);
+  const fromSel = document.getElementById('range-from');
+  const toSel = document.getElementById('range-to');
+  fromSel.innerHTML = sorted.map(w => `<option value="${w.startDate||w.weekLabel||''}">${w.weekLabel||w.startDate||''}</option>`).join('');
+  toSel.innerHTML = sorted.map(w => `<option value="${w.startDate||w.weekLabel||''}">${w.weekLabel||w.startDate||''}</option>`).join('');
+  toSel.selectedIndex = sorted.length - 1;
+  STATE.weekRange.from = null;
+  STATE.weekRange.to = null;
+}
+
+function applyWeekRange(){
+  STATE.weekRange.from = document.getElementById('range-from').value || null;
+  STATE.weekRange.to = document.getElementById('range-to').value || null;
+  renderAvgChart();
+  renderCountChart();
+}
+
+function resetWeekRange(){
+  STATE.weekRange.from = null;
+  STATE.weekRange.to = null;
+  const weekly = (DATA.history && DATA.history.weekly) || [];
+  const sorted = [...weekly].sort((a,b) => (a.startDate||a.weekLabel||'') < (b.startDate||b.weekLabel||'') ? -1 : 1);
+  if(sorted.length) {
+    document.getElementById('range-from').selectedIndex = 0;
+    document.getElementById('range-to').selectedIndex = sorted.length - 1;
+  }
+  renderAvgChart();
+  renderCountChart();
+}
+
 function renderWeekComparison(){
   const weekly = (DATA.history && DATA.history.weekly) || [];
   const el = $('week-compare');
@@ -2621,7 +2674,7 @@ function renderWeekComparison(){
   function delta(a, b){
     if(a == null || b == null) return '';
     const d = a - b;
-    if(d === 0) return '<span style="color:var(--muted)">→ igual</span>';
+    if(d === 0) return '<span style="color:var(--muted)">→ same</span>';
     return d > 0
       ? '<span style="color:#4caf50">▲ +' + (Number.isInteger(d) ? d : d.toFixed(2)) + '</span>'
       : '<span style="color:#ef5350">▼ ' + (Number.isInteger(d) ? d : d.toFixed(2)) + '</span>';
@@ -2683,6 +2736,9 @@ function bindTabs(id, key, prop){
       if(key==='avg') renderAvgChart();
       if(key==='count') renderCountChart();
       if(key==='guides') renderGuidesChart();
+      // Show range filter card when either chart is in weekly view
+      const showRange = STATE.avg.view === 'weekly' || STATE.count.view === 'weekly';
+      document.getElementById('range-filter-card').style.display = showRange ? '' : 'none';
     });
   });
 }
@@ -2717,6 +2773,7 @@ function render(){
   renderCountChart();
   renderGuidesChart();
   renderGuideTable();
+  buildWeekRangeSelects();
   renderWeekComparison();
   renderLow();
 
