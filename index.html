@@ -132,6 +132,7 @@ footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:0.78rem;
     <span class="pill" id="hero-pill">YTD 2026: —</span>
     <button class="btn" onclick="document.getElementById('upload-input').click()">↑ Upload data.json</button>
     <input type="file" id="upload-input" accept="application/json,.json" style="display:none" onchange="handleUpload(event)">
+    <button class="btn btn-ghost" id="btn-bake" onclick="downloadBakedIndex()" style="display:none">↓ Descargar index.html</button>
     <div class="entry">
       <span>Last data entry</span>
       <strong id="last-entry">—</strong>
@@ -249,6 +250,7 @@ footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:0.78rem;
 <div class="toast" id="toast"></div>
 
 <script>
+// @@BAKED_DATA_START@@
 const DEFAULT_DATA = {
   "generatedAt": "2026-05-25T04:44:09.183Z",
   "year": 2026,
@@ -2329,14 +2331,34 @@ function handleUpload(e){
       const d = JSON.parse(ev.target.result);
       if(!d.ytd2026 && !d.allTime) throw new Error('Missing ytd2026 field');
       DATA = d;
-      const saved = saveToStorage(d);
+      saveToStorage(d);
       initState();
       render();
-      toast(saved ? '✓ Saved & loaded ' + f.name : '✓ Loaded (not saved — storage full)');
+      document.getElementById('btn-bake').style.display = '';
+      toast('✓ Datos cargados — click "↓ Descargar index.html" para deployar');
     }catch(err){ toast('✗ Invalid file: '+err.message, true); }
   };
   r.readAsText(f);
   e.target.value = '';
+}
+
+async function downloadBakedIndex(){
+  try {
+    const src = await fetch(location.href).then(r => r.text());
+    const newData = 'const DEFAULT_DATA = ' + JSON.stringify(DATA, null, 2) + ';';
+    const updated = src.replace(
+      /\/\/ @@BAKED_DATA_START@@[\s\S]*?\/\/ @@BAKED_DATA_END@@/,
+      '// @@BAKED_DATA_START@@\n' + newData + '\n// @@BAKED_DATA_END@@'
+    );
+    if(updated === src){ toast('✗ No se pudo actualizar — marcadores no encontrados', true); return; }
+    const blob = new Blob([updated], {type: 'text/html'});
+    const a = Object.assign(document.createElement('a'), {href: URL.createObjectURL(blob), download: 'index.html'});
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('✓ index.html descargado — deployalo en Netlify');
+  } catch(err) {
+    toast('✗ Error: ' + err.message, true);
+  }
 }
 
 function resetData(){
