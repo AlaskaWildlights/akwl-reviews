@@ -132,8 +132,6 @@ footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:0.78rem;
     <span class="pill" id="hero-pill">YTD 2026: —</span>
     <button class="btn" onclick="document.getElementById('upload-input').click()">↑ Upload data.json</button>
     <input type="file" id="upload-input" accept="application/json,.json" style="display:none" onchange="handleUpload(event)">
-    <button class="btn btn-ghost" onclick="downloadData()">↓ Download</button>
-    <button class="btn btn-ghost" onclick="resetData()" title="Clear saved data and reload baked-in defaults">↺ Reset</button>
     <div class="entry">
       <span>Last data entry</span>
       <strong id="last-entry">—</strong>
@@ -229,6 +227,11 @@ footer{text-align:center;padding:30px 16px;color:var(--muted);font-size:0.78rem;
   </table>
   </div>
   <div style="font-size:0.72rem;color:var(--muted);margin-top:10px">YTD 5★ counts 5-star reviews that mention the guide's name. Jan–Apr from team Reviews Tracker; May onward auto-tracked. Bonus rule: $10 per Google 5★, $5 per TripAdvisor 5★.</div>
+</div>
+
+<div class="card" id="week-compare-card">
+  <h2>📅 Week-over-week comparison</h2>
+  <div id="week-compare"></div>
 </div>
 
 <div class="card">
@@ -2463,7 +2466,7 @@ function getPeriods(stateKey){
       }
     }}];
   }
-  return weekly.map(w => ({label: w.label || w.week, key: w.week, data: w}));
+  return weekly.map(w => ({label: w.weekLabel || w.label || w.week, key: w.startDate || w.weekLabel || w.week, data: w}));
 }
 
 function renderAvgChart(){
@@ -2582,6 +2585,59 @@ function renderGuideTable(){
   </tr>`).join('');
 }
 
+function renderWeekComparison(){
+  const weekly = (DATA.history && DATA.history.weekly) || [];
+  const el = $('week-compare');
+  const card = $('week-compare-card');
+  if(weekly.length < 2){ card.style.display='none'; return; }
+  card.style.display='';
+
+  const sorted = [...weekly].sort((a,b) => (a.startDate||a.weekLabel||'') < (b.startDate||b.weekLabel||'') ? -1 : 1);
+  const prev = sorted[sorted.length - 2];
+  const curr = sorted[sorted.length - 1];
+
+  function delta(a, b){
+    if(a == null || b == null) return '';
+    const d = a - b;
+    if(d === 0) return '<span style="color:var(--muted)">→ igual</span>';
+    return d > 0
+      ? '<span style="color:#4caf50">▲ +' + (Number.isInteger(d) ? d : d.toFixed(2)) + '</span>'
+      : '<span style="color:#ef5350">▼ ' + (Number.isInteger(d) ? d : d.toFixed(2)) + '</span>';
+  }
+
+  const pGM = prev.platforms && prev.platforms.googleMaps || {};
+  const cGM = curr.platforms && curr.platforms.googleMaps || {};
+  const pTA = prev.platforms && prev.platforms.tripAdvisor || {};
+  const cTA = curr.platforms && curr.platforms.tripAdvisor || {};
+
+  const rows = [
+    ['Reviews (total)', prev.totalReviews||0, curr.totalReviews||0, false],
+    ['Google Maps reviews', pGM.count||0, cGM.count||0, false],
+    ['Google Maps avg ★', pGM.avg||null, cGM.avg||null, true],
+    ['TripAdvisor reviews', pTA.count||0, cTA.count||0, false],
+    ['TripAdvisor avg ★', pTA.avg||null, cTA.avg||null, true],
+    ['Bonuses earned', prev.totalBonus||0, curr.totalBonus||0, false],
+  ];
+
+  el.innerHTML = '<table style="width:100%;border-collapse:collapse">' +
+    '<thead><tr>' +
+    '<th style="text-align:left;padding:8px 10px;font-size:0.75rem;color:var(--muted);border-bottom:1px solid var(--border)"></th>' +
+    '<th style="text-align:center;padding:8px 10px;font-size:0.75rem;color:var(--muted);border-bottom:1px solid var(--border)">' + esc(prev.weekLabel || prev.startDate || 'Prev') + '</th>' +
+    '<th style="text-align:center;padding:8px 10px;font-size:0.75rem;color:var(--teal);border-bottom:1px solid var(--border)">' + esc(curr.weekLabel || curr.startDate || 'This week') + '</th>' +
+    '<th style="text-align:center;padding:8px 10px;font-size:0.75rem;color:var(--muted);border-bottom:1px solid var(--border)">Change</th>' +
+    '</tr></thead><tbody>' +
+    rows.map(([label, pv, cv, isFloat]) => {
+      const fmt = v => v == null ? '—' : (isFloat ? (v > 0 ? v.toFixed(2)+'★' : '—') : (label.includes('Bonus') ? '$'+v : v));
+      return '<tr>' +
+        '<td style="padding:7px 10px;font-size:0.8rem;color:var(--muted)">' + label + '</td>' +
+        '<td style="padding:7px 10px;text-align:center;font-size:0.85rem">' + fmt(pv) + '</td>' +
+        '<td style="padding:7px 10px;text-align:center;font-size:0.85rem;font-weight:600">' + fmt(cv) + '</td>' +
+        '<td style="padding:7px 10px;text-align:center;font-size:0.8rem">' + delta(cv, pv) + '</td>' +
+        '</tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
 function renderLow(){
   const lows = (DATA.current && DATA.current.lowRatings) || [];
   const c = $('low-list');
@@ -2639,6 +2695,7 @@ function render(){
   renderCountChart();
   renderGuidesChart();
   renderGuideTable();
+  renderWeekComparison();
   renderLow();
 
   const ts = DATA.generatedAt || DATA.timestamp;
