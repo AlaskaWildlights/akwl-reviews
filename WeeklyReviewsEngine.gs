@@ -192,7 +192,7 @@ var HISTORY_BASELINE_2026 = {
       ]
     },
     {
-      weekLabel: 'May 25 – May 31, 2026', startDate: '2026-05-25', endDate: '2026-05-31',
+      weekLabel: 'May 24 – May 30, 2026', startDate: '2026-05-24', endDate: '2026-05-30',
       platforms: { googleMaps: {count:8,avg:4.5,fiveStar:7}, tripAdvisor: {count:1,avg:5,fiveStar:1} },
       totalReviews: 9, totalBonus: 65,
       guides: [
