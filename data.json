@@ -1,14 +1,14 @@
 {
-  "weekLabel": "May 17 – May 23, 2026",
-  "timestamp": "2026-05-25T04:44:07.459Z",
+  "weekLabel": "May 24 – May 30, 2026",
+  "timestamp": "2026-05-31T12:59:18.853Z",
   "summary": {
-    "totalReviews": 4,
-    "gmapsCount": 3,
-    "gmapsAvg": "4.7",
-    "taCount": 1,
+    "totalReviews": 10,
+    "gmapsCount": 8,
+    "gmapsAvg": "4.5",
+    "taCount": 2,
     "taAvg": "5.0",
-    "combinedAvg": "4.8",
-    "totalBonus": 30
+    "combinedAvg": "4.6",
+    "totalBonus": 45
   },
   "guides": [
     {
@@ -19,7 +19,14 @@
       "bonus": 20
     },
     {
-      "name": "Sierra Baker",
+      "name": "Pepper Burrel",
+      "gmaps": 1,
+      "ta": 1,
+      "fiveStar": 2,
+      "bonus": 15
+    },
+    {
+      "name": "Jodi Bailey",
       "gmaps": 1,
       "ta": 0,
       "fiveStar": 1,
@@ -41,13 +48,6 @@
     },
     {
       "name": "Dylan Berggren",
-      "gmaps": 0,
-      "ta": 0,
-      "fiveStar": 0,
-      "bonus": 0
-    },
-    {
-      "name": "Jodi Bailey",
       "gmaps": 0,
       "ta": 0,
       "fiveStar": 0,
@@ -89,6 +89,13 @@
       "bonus": 0
     },
     {
+      "name": "Sierra Baker",
+      "gmaps": 0,
+      "ta": 0,
+      "fiveStar": 0,
+      "bonus": 0
+    },
+    {
       "name": "Wesley Campbell",
       "gmaps": 0,
       "ta": 0,
@@ -97,13 +104,6 @@
     },
     {
       "name": "Sullivan Bogardus",
-      "gmaps": 0,
-      "ta": 0,
-      "fiveStar": 0,
-      "bonus": 0
-    },
-    {
-      "name": "Pepper Burrel",
       "gmaps": 0,
       "ta": 0,
       "fiveStar": 0,
@@ -124,21 +124,28 @@
       "bonus": 0
     }
   ],
-  "lowRatings": [],
+  "lowRatings": [
+    {
+      "guide": "UNASSIGNED",
+      "rating": 1,
+      "platform": "gmaps",
+      "text": "How convenient to change your company's name and addresses and omit tons of negative reviews... So putting my review back in here as per previously documented outrageously unprofessional conduct of your employee and refusal for refund initiated due to valid privacy concerns and misconduct."
+    }
+  ],
   "allTime": {
     "googleMaps": {
-      "count": 103,
-      "avg": "4.54"
+      "count": 59,
+      "avg": "4.66"
     },
     "tripAdvisor": {
-      "count": 101,
-      "avg": "4.55"
+      "count": 53,
+      "avg": "4.38"
     },
     "combined": {
-      "count": 204,
-      "avg": "4.55"
+      "count": 112,
+      "avg": "4.53"
     },
-    "averageRating": "4.55",
-    "totalReviews": 204
+    "averageRating": "4.53",
+    "totalReviews": 112
   }
 }
