@@ -142,21 +142,70 @@ Each layer can override the one below for the same `weekLabel`. Monthly totals +
 
 **Guides list** — maintained in the linked Google Sheet (the `Employee Info` tab). Add or remove rows there; the script reads the list on every run.
 
-### Optional future upgrade (GitHub auto-deploy)
+### GitHub auto-deploy (READY TO ACTIVATE)
 
-If you want to eliminate the manual upload/download/deploy step entirely:
+The script now supports automatic GitHub push → Netlify deploy. **Status:** Code ready, just needs token + Netlify connection.
 
-| Key | Value |
-|---|---|
-| `GITHUB_TOKEN` | Personal Access Token with `repo` scope |
-| `GITHUB_OWNER` | `alaskawildlights` |
-| `GITHUB_REPO` | `akwl-reviews` |
+**Activation steps:**
 
-Then connect the repo to Netlify with auto-deploy. See Section 6.
+1. Generate a GitHub Personal Access Token:
+   - Go to https://github.com/settings/tokens → "Tokens (classic)" → "Generate new token"
+   - Name: `AKWL Apps Script`
+   - Expiration: 1 year (or no expiration if preferred)
+   - Scopes: tick **`repo`** (full control of repositories)
+   - Click "Generate" and **copy immediately** (won't show again)
+
+2. Add to Apps Script Properties:
+   - Open Apps Script → Project Settings → Script properties → Add property
+   - `GITHUB_TOKEN` = paste the token you just generated
+   - `GITHUB_OWNER` = `alaskawildlights` (already defaults to this)
+   - `GITHUB_REPO` = `akwl-reviews` (already defaults to this)
+
+3. Connect Netlify to GitHub:
+   - Go to Netlify dashboard → your site → **Site settings → Build & deploy → Continuous deployment**
+   - Click **Link site to Git** → select `alaskawildlights/akwl-reviews` → branch `main`
+   - Leave build command empty, publish directory = `.`
+   - Save
+
+**After setup:** Each Monday at 6 AM, the script will:
+1. Scrape reviews from Apify
+2. Send email with HTML tables + JSON
+3. **Push data.json to GitHub**
+4. **Netlify webhook triggers auto-deploy**
+5. All devices see updated dashboard within seconds — zero manual steps
 
 ---
 
-## 6. Future upgrade: GitHub + Netlify auto-deploy
+## 6. Historical Data Integration
+
+### Obtaining Complete TripAdvisor Review History
+
+The current system includes TripAdvisor data from 2025-01 onwards (~775 reviews). To add complete historical data (pre-2025, potentially 5000+ total reviews):
+
+**Option A: Scrape all-time (recommended for completeness)**
+- Run Apify `maxcopell~tripadvisor-reviews` actor with:
+  - No date filter (leave empty to get all reviews)
+  - Expected cost: ~$25–50 depending on actual count
+  - Expected results: 1000–2000+ reviews covering the business's entire TripAdvisor history
+
+**Option B: Scrape 2025-forward only (cost-efficient)**
+- Keeps current approach
+- Expected cost: ~$15–25
+- Expected results: ~850–900 reviews
+
+**Once you have the CSV:**
+
+1. Convert the CSV data into the same format as Jan–Apr baseline (see `HISTORY_BASELINE_2026.monthly` in the script)
+2. Edit `HISTORY_BASELINE_2026.monthly` to add pre-2025 months (e.g., 2024-12, 2024-11, etc.)
+3. Also update `HISTORY_BASELINE_2026.byGuide` with per-guide 5-star counts for pre-2025 periods
+4. Re-deploy the script
+5. Upload the updated `index.html` with baked-in historical data
+
+**Integration helper:** Use `util_GenerateMonthlyBaseline()` to auto-tally any new monthly period you add.
+
+---
+
+## 7. GitHub + Netlify auto-deploy (SETUP READY)
 
 Switching from "email → manual upload → manual deploy" to "fully automatic" is a 5-minute setup. Worth doing because:
 - All devices see the new data without any manual step
@@ -183,15 +232,9 @@ Switching from "email → manual upload → manual deploy" to "fully automatic" 
 - Re-enable the call in `runWeeklyReport()` (currently disabled because the integration isn't live yet)
 - After that, each weekly run will push `data/latest.json` to the repo
 
-### Step 5 — Update the dashboard to fetch `data/latest.json` on load
-- The dashboard's `loadFromStorage()` becomes `fetch('./data/latest.json')` first, then falls back to `DEFAULT_DATA`
+### ---
 
-After this is in place, the workflow is:
-- **Monday morning:** trigger fires → script scrapes → pushes JSON to GitHub → Netlify redeploys → all devices show new data. **Zero manual steps.**
-
----
-
-## 7. Quick reference — what to do when…
+## 8. Quick reference — what to do when…
 
 ### …the Monday script didn't run
 1. Open Apps Script → **Executions** tab → check for the latest `runWeeklyReport` entry
@@ -227,7 +270,7 @@ After this is in place, the workflow is:
 
 ---
 
-## 8. Key files & locations
+## 9. Key files & locations
 
 | File | Where | Purpose |
 |---|---|---|
@@ -239,7 +282,7 @@ After this is in place, the workflow is:
 
 ---
 
-## 9. Contact / troubleshooting
+## 10. Contact / troubleshooting
 
 - **Apps Script project owner:** Alaska Wild Lights (info@alaskawildlights.com)
 - **Dashboard URL:** Netlify-hosted (check Netlify dashboard for current URL)
