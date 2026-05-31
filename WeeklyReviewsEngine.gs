@@ -1,5 +1,11 @@
 // ============================================================
-// ALASKA WILD LIGHTS — Weekly Reviews Engine v4.15
+// ALASKA WILD LIGHTS — Weekly Reviews Engine v4.17
+//
+// v4.17 — GITHUB AUTO-DEPLOY READY
+//   - Script pushes data.json to GitHub after email (when GITHUB_TOKEN set)
+//   - Dashboard fetches latest data from GitHub on page load
+//   - Netlify can now auto-deploy on data.json changes
+//   - Email workflow (no push) still fully functional
 //
 // v4.15 — EMAIL IS THE DATABASE (Drive becomes optional backup)
 //   - Script reads its OWN previous email attachment to recover the
@@ -684,7 +690,7 @@ function runWeeklyReport() {
   try {
     Logger.log('');
     Logger.log('╔════════════════════════════════════════════╗');
-    Logger.log('║ AKWL Weekly Reviews Engine v4.16          ║');
+    Logger.log('║ AKWL Weekly Reviews Engine v4.17          ║');
     Logger.log('╚════════════════════════════════════════════╝');
     Logger.log('');
 
@@ -1722,7 +1728,7 @@ function sendWeeklyEmail(metrics, runningState, weekLabel, dashboardJson, C) {
     s += '<div class="no-bonus">Sin bonuses esta semana</div>';
   }
 
-  s += '<div class="foot">Generado por AKWL Reviews Engine v4.17 &mdash; ' +
+  s += '<div class="foot">Generado por AKWL Reviews Engine v4.17 (GitHub auto-deploy ready) &mdash; ' +
        '<a href="' + dashUrl + '" style="color:#0d47a1">Dashboard</a></div>' +
        '</div></body></html>';
 
