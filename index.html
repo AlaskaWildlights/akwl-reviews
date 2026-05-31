@@ -2394,9 +2394,12 @@ function saveToStorage(data){
 }
 
 function loadDataInitial(){
-  // Priority: localStorage → baked-in DEFAULT_DATA
   const stored = loadFromStorage();
-  return stored || DEFAULT_DATA;
+  if(!stored) return DEFAULT_DATA;
+  // Use whichever is more recent
+  const storedDate = stored.generatedAt || '1970-01-01';
+  const bakedDate  = DEFAULT_DATA.generatedAt || '1970-01-01';
+  return storedDate >= bakedDate ? stored : DEFAULT_DATA;
 }
 
 async function refreshFromGitHub(){
