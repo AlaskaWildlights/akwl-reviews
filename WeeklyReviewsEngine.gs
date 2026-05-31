@@ -193,8 +193,8 @@ var HISTORY_BASELINE_2026 = {
     },
     {
       weekLabel: 'May 24 – May 30, 2026', startDate: '2026-05-24', endDate: '2026-05-30',
-      platforms: { googleMaps: {count:8,avg:4.5,fiveStar:7}, tripAdvisor: {count:1,avg:5,fiveStar:1} },
-      totalReviews: 9, totalBonus: 65,
+      platforms: { googleMaps: {count:8,avg:4.5,fiveStar:7}, tripAdvisor: {count:2,avg:5,fiveStar:2} },
+      totalReviews: 10, totalBonus: 65,
       guides: [
         {name:'Shannon Williams', gmaps:3, ta:0, fiveStar:3, bonus:30, gmapsFiveStar:3, taFiveStar:0},
         {name:'Pepper Burrel',    gmaps:1, ta:1, fiveStar:2, bonus:15, gmapsFiveStar:1, taFiveStar:1},

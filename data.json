@@ -62,9 +62,9 @@
       "tripAdvisor": {
         "displayName": "TripAdvisor",
         "color": "#a78bfa",
-        "count": 146,
-        "stars": 658,
-        "fiveStar": 111,
+        "count": 147,
+        "stars": 663,
+        "fiveStar": 112,
         "avg": 4.51
       },
       "googleMaps": {
@@ -117,10 +117,10 @@
       }
     },
     "combined": {
-      "count": 266,
-      "stars": 1193.1,
-      "fiveStar": 200,
-      "avg": 4.48,
+      "count": 267,
+      "stars": 1198.1,
+      "fiveStar": 201,
+      "avg": 4.49,
       "totalBonus": 1045
     },
     "source": "Jan-Apr 2026 from Reviews Tracker; May onward from Apps Script (Apify scraping)."
@@ -128,10 +128,10 @@
   "current": {
     "weekLabel": "May 24 – May 30, 2026",
     "summary": {
-      "totalReviews": 9,
+      "totalReviews": 10,
       "gmapsCount": 8,
       "gmapsAvg": "4.5",
-      "taCount": 1,
+      "taCount": 2,
       "taAvg": "5.0",
       "combinedAvg": "4.6",
       "totalBonus": 65
@@ -717,16 +717,16 @@
         "month": "2026-05",
         "platforms": {
           "tripAdvisor": {
-            "count": 7,
-            "stars": 27,
-            "fiveStar": 2,
-            "avg": 3.86,
+            "count": 8,
+            "stars": 32,
+            "fiveStar": 3,
+            "avg": 4.0,
             "breakdown": {
               "1": 1,
               "2": 0,
               "3": 0,
               "4": 0,
-              "5": 2
+              "5": 3
             }
           },
           "googleMaps": {
@@ -808,9 +808,9 @@
             }
           }
         },
-        "totalReviews": 21,
-        "totalStars": 92.1,
-        "combinedAvg": 4.39,
+        "totalReviews": 22,
+        "totalStars": 97.1,
+        "combinedAvg": 4.41,
         "totalBonus": 160
       },
       {
@@ -1534,12 +1534,12 @@
             "fiveStar": 7
           },
           "tripAdvisor": {
-            "count": 1,
+            "count": 2,
             "avg": 5,
-            "fiveStar": 1
+            "fiveStar": 2
           }
         },
-        "totalReviews": 9,
+        "totalReviews": 10,
         "totalBonus": 65,
         "guides": [
           {
