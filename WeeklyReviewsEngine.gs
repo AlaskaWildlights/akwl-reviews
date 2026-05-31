@@ -190,6 +190,17 @@ var HISTORY_BASELINE_2026 = {
         {name:'Shannon Williams', gmaps:2, ta:0, fiveStar:2, bonus:20, gmapsFiveStar:2, taFiveStar:0},
         {name:'Sierra Baker',     gmaps:1, ta:0, fiveStar:1, bonus:10, gmapsFiveStar:1, taFiveStar:0}
       ]
+    },
+    {
+      weekLabel: 'May 25 – May 31, 2026', startDate: '2026-05-25', endDate: '2026-05-31',
+      platforms: { googleMaps: {count:8,avg:4.5,fiveStar:7}, tripAdvisor: {count:1,avg:5,fiveStar:1} },
+      totalReviews: 9, totalBonus: 65,
+      guides: [
+        {name:'Shannon Williams', gmaps:3, ta:0, fiveStar:3, bonus:30, gmapsFiveStar:3, taFiveStar:0},
+        {name:'Pepper Burrel',    gmaps:1, ta:1, fiveStar:2, bonus:15, gmapsFiveStar:1, taFiveStar:1},
+        {name:'Dylan Berggren',   gmaps:1, ta:0, fiveStar:1, bonus:10, gmapsFiveStar:1, taFiveStar:0},
+        {name:'Jodi Bailey',      gmaps:1, ta:0, fiveStar:1, bonus:10, gmapsFiveStar:1, taFiveStar:0}
+      ]
     }
   ]
 };
