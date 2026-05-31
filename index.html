@@ -2314,7 +2314,30 @@ function saveToStorage(data){
   } catch(e) { console.warn('localStorage save failed:', e); return false; }
 }
 
-let DATA = loadFromStorage() || DEFAULT_DATA;
+function loadDataInitial(){
+  // Priority: localStorage → baked-in DEFAULT_DATA
+  const stored = loadFromStorage();
+  return stored || DEFAULT_DATA;
+}
+
+async function refreshFromGitHub(){
+  // Optional: fetch latest data.json from GitHub (pushed by Apps Script weekly)
+  try {
+    const resp = await fetch('./data.json', { cache: 'no-store' });
+    if(resp.ok){
+      const d = await resp.json();
+      if(d.ytd2026 && d.allTime) {
+        DATA = d;
+        saveToStorage(d);
+        initState();
+        render();
+        console.log('[Dashboard] Refreshed from GitHub data.json');
+      }
+    }
+  } catch(e) { /* silently ignore */ }
+}
+
+let DATA = loadDataInitial();
 let CHARTS = {};
 let STATE = {
   avg: {view:'monthly', platforms:{}},
@@ -2792,6 +2815,9 @@ bindTabs('tabs-guides-view','guides','view');
 
 initState();
 render();
+
+// Optional: try to fetch latest data from GitHub (pushed by Apps Script)
+refreshFromGitHub();
 </script>
 </body>
 </html>

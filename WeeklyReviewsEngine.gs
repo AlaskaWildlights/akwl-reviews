@@ -792,6 +792,19 @@ function runWeeklyReport() {
     Logger.log('   ✓ Email enviado con tablas HTML + akwl-reviews-data.json adjunto');
     Logger.log('');
 
+    // Optionally push to GitHub for auto-deploy if token is configured
+    if (C.GITHUB_TOKEN) {
+      try {
+        Logger.log('📤 Pushing JSON to GitHub...');
+        pushToGitHub(dashboardJSON, C);
+        Logger.log('   ✓ JSON pushed to GitHub (Netlify webhook will auto-deploy)');
+      } catch (e) {
+        Logger.log('   ⚠  GitHub push failed: ' + e.message);
+        // Don't fail the entire run — email/sheets already succeeded
+      }
+      Logger.log('');
+    }
+
     // -------- Everything above succeeded. Persist state LAST so a partial
     //          failure earlier does not advance the cumulative totals. --------
     persistRunningState(running);
