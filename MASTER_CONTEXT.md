@@ -126,10 +126,10 @@ Merge priority: baseline → email JSON → current week
 ### Current baked data (as of May 31, 2026)
 
 **YTD 2026:**
-- 266 total reviews
-- 4.48★ combined average  
+- 267 total reviews
+- 4.49★ combined average  
 - $1,045 total bonuses paid
-- TripAdvisor: 146 reviews, 4.51★ avg, 111 five-star
+- TripAdvisor: 147 reviews, 4.51★ avg, 112 five-star
 - Google Maps: 61 reviews, 4.66★ avg, 50 five-star
 - GetYourGuide: 54 reviews, 4.35★ avg (historical, no longer scraped)
 
@@ -149,10 +149,12 @@ Merge priority: baseline → email JSON → current week
 | May 3–9, 2026 | 6 | Shannon Williams ($30), Dylan Berggren ($15) |
 | May 10–16, 2026 | 2 | Jodi Bailey ($10), RIpley Caldwell ($10) |
 | May 17–23, 2026 | 4 | Shannon Williams ($20), Sierra Baker ($10) |
-| May 25–31, 2026 | 9 | Shannon Williams ($30), Pepper Burrel ($15), Dylan Berggren ($10), Jodi Bailey ($10) |
+| May 24–30, 2026 | 10 | Shannon Williams ($30), Pepper Burrel ($15), Dylan Berggren ($10), Jodi Bailey ($10) |
 
-**May 25–31 review detail (manually entered this session):**
-- TripAdvisor: ccistar4ever (May 28, 5★) → Pepper Burrel
+**May 24–30 review detail (manually entered this session):**
+- TripAdvisor:
+  - ccistar4ever (May 28, 5★) → Pepper Burrel
+  - Nomad05333893722 (May 30, 5★) → UNASSIGNED (no guide mentioned)
 - Google Maps:
   - Gina Lombardini (5★) → Pepper Burrel
   - Komal Thakkar (5★) → UNASSIGNED (no text mentioning a guide)
@@ -439,14 +441,14 @@ Dashboard updates for all viewers
 
 Copy and paste this:
 
-> "I'm working on the AKWL Reviews dashboard for Alaska Wild Lights (northern lights tours, Fairbanks AK). Repo: `alaskawildlights/akwl-reviews`, branch `claude/rebuild-reviews-dashboard-KX41r`. Full context is in `MASTER_CONTEXT.md` in the repo. The system is: Google Apps Script (`WeeklyReviewsEngine.gs` v4.17) that scrapes reviews weekly + publishes a dashboard (`index.html` on Netlify). Today's date: [DATE]. The data is current through May 31, 2026 (266 reviews, 4.48★ YTD, $1,045 bonuses). I need [your specific task]. The main pending items are: (1) GitHub auto-deploy setup — 5 min, code is ready, just needs GITHUB_TOKEN in Script Properties + Netlify linked to GitHub; (2) Reviews Tracker reconstruction — add manual entry for non-Apify platforms (GetYourGuide, Civitatis, Expedia, Atmos, Booking); (3) TripAdvisor full history (optional, ~$25-50 Apify run); (4) Fuzzy guide name matching."
+> "I'm working on the AKWL Reviews dashboard for Alaska Wild Lights (northern lights tours, Fairbanks AK). Repo: `alaskawildlights/akwl-reviews`, branch `claude/rebuild-reviews-dashboard-KX41r`. Full context is in `MASTER_CONTEXT.md` in the repo. The system is: Google Apps Script (`WeeklyReviewsEngine.gs` v4.17) that scrapes reviews weekly + publishes a dashboard (`index.html` on Netlify). Today's date: [DATE]. The data is current through May 30, 2026 (267 reviews, 4.49★ YTD, $1,045 bonuses). I need [your specific task]. The main pending items are: (1) GitHub auto-deploy setup — 5 min, code is ready, just needs GITHUB_TOKEN in Script Properties + Netlify linked to GitHub; (2) Reviews Tracker reconstruction — add manual entry for non-Apify platforms (GetYourGuide, Civitatis, Expedia, Atmos, Booking); (3) TripAdvisor full history (optional, ~$25-50 Apify run); (4) Fuzzy guide name matching."
 
 ---
 
 ## PART 14 — RECENT COMMIT HISTORY
 
 ```
-8576d3a  feat: add May 25–31 2026 weekly data (9 reviews, $65 bonus)
+8576d3a  feat: add May 24–30 2026 weekly data (9 reviews, $65 bonus)
 733978b  feat: add May 24-30 week + May monthly fix + history byGuide corrections
 28bf7ea  chore: update script version to v4.17
 26ed225  docs: add activation checklist
@@ -461,4 +463,4 @@ e2c3f3f  fix: simplify weekly email
 
 ---
 
-*Written: May 31, 2026 · v4.17 · All data current through week of May 25–31, 2026*
+*Written: May 31, 2026 · v4.17 · All data current through week of May 24–30, 2026 (10 reviews: 8 Google + 2 TripAdvisor)*
