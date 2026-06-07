@@ -201,6 +201,14 @@ var HISTORY_BASELINE_2026 = {
         {name:'Dylan Berggren',   gmaps:1, ta:0, fiveStar:1, bonus:10, gmapsFiveStar:1, taFiveStar:0},
         {name:'Jodi Bailey',      gmaps:1, ta:0, fiveStar:1, bonus:10, gmapsFiveStar:1, taFiveStar:0}
       ]
+    },
+    {
+      weekLabel: 'May 31 – Jun 6, 2026', startDate: '2026-05-31', endDate: '2026-06-06',
+      platforms: { googleMaps: {count:3,avg:5,fiveStar:3}, tripAdvisor: {count:2,avg:5,fiveStar:2} },
+      totalReviews: 5, totalBonus: 20,
+      guides: [
+        {name:'Jodi Bailey', gmaps:1, ta:2, fiveStar:3, bonus:20, gmapsFiveStar:1, taFiveStar:2}
+      ]
     }
   ]
 };
