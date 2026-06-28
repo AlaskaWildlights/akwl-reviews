@@ -1,9 +1,9 @@
 {
-  "weekLabel": "Jun 14 – Jun 20, 2026",
-  "timestamp": "2026-06-21T12:59:18.168Z",
+  "weekLabel": "Jun 21 – Jun 27, 2026",
+  "timestamp": "2026-06-28T12:59:17.056Z",
   "summary": {
-    "totalReviews": 5,
-    "gmapsCount": 4,
+    "totalReviews": 12,
+    "gmapsCount": 11,
     "gmapsAvg": "5.0",
     "taCount": 1,
     "taAvg": "5.0",
@@ -14,18 +14,18 @@
   "lowRatings": [],
   "allTime": {
     "googleMaps": {
-      "count": 55,
-      "avg": "4.71"
+      "count": 62,
+      "avg": "4.74"
     },
     "tripAdvisor": {
       "count": 52,
       "avg": "4.37"
     },
     "combined": {
-      "count": 107,
-      "avg": "4.54"
+      "count": 114,
+      "avg": "4.57"
     },
-    "averageRating": "4.54",
-    "totalReviews": 107
+    "averageRating": "4.57",
+    "totalReviews": 114
   }
 }
