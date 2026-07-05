@@ -1,31 +1,38 @@
 {
-  "weekLabel": "Jun 21 – Jun 27, 2026",
-  "timestamp": "2026-06-28T12:59:17.056Z",
+  "weekLabel": "Jun 28 – Jul 4, 2026",
+  "timestamp": "2026-07-05T13:00:19.605Z",
   "summary": {
-    "totalReviews": 12,
-    "gmapsCount": 11,
+    "totalReviews": 4,
+    "gmapsCount": 3,
     "gmapsAvg": "5.0",
     "taCount": 1,
-    "taAvg": "5.0",
-    "combinedAvg": "5.0",
+    "taAvg": "1.0",
+    "combinedAvg": "4.0",
     "totalBonus": 0
   },
   "guides": [],
-  "lowRatings": [],
+  "lowRatings": [
+    {
+      "guide": "UNASSIGNED",
+      "rating": 1,
+      "platform": "tripadvisor",
+      "text": "If you like going into the outback, you will love this experience. However, if you have difficulty getting in and out of a full van of people, I don't recommend the tour. There were multiple difficulties for us: 1) it was a 15 hour day with many stops (advertised as 12 hour day); 2) the roads are not paved, so the dust was horrible; 3) the air conditioning in the van did not work and there were no windows to open except in the front; it was 70 degrees so we were hot; 4) there were 11 people in a 15 passenger van, all but 1 were elderly.\nThe guide was wonderful and very knowledgeable. The best part was lunch at the Yukon River Camp. The food was the best we had in Alaska, hot and fresh!! The people were great. The beauty of Alaska was wonderful. The oil pipeline was interesting.\n\nOver-all I do not recommend this tour unless you are young and don't mind breathing dust. We were sick for 2 weeks with lung problems upon return home."
+    }
+  ],
   "allTime": {
     "googleMaps": {
-      "count": 62,
-      "avg": "4.74"
+      "count": 54,
+      "avg": "4.70"
     },
     "tripAdvisor": {
       "count": 52,
-      "avg": "4.37"
+      "avg": "4.29"
     },
     "combined": {
-      "count": 114,
-      "avg": "4.57"
+      "count": 106,
+      "avg": "4.50"
     },
-    "averageRating": "4.57",
-    "totalReviews": 114
+    "averageRating": "4.50",
+    "totalReviews": 106
   }
 }
