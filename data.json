@@ -1,31 +1,38 @@
 {
-  "weekLabel": "Jul 12 – Jul 18, 2026",
-  "timestamp": "2026-07-19T12:59:47.879Z",
+  "weekLabel": "Jul 19 – Jul 25, 2026",
+  "timestamp": "2026-07-26T12:59:20.665Z",
   "summary": {
-    "totalReviews": 6,
-    "gmapsCount": 4,
-    "gmapsAvg": "5.0",
-    "taCount": 2,
-    "taAvg": "4.5",
-    "combinedAvg": "4.8",
+    "totalReviews": 7,
+    "gmapsCount": 7,
+    "gmapsAvg": "4.4",
+    "taCount": 0,
+    "taAvg": "N/A",
+    "combinedAvg": "4.4",
     "totalBonus": 0
   },
   "guides": [],
-  "lowRatings": [],
+  "lowRatings": [
+    {
+      "guide": "UNASSIGNED",
+      "rating": 1,
+      "platform": "gmaps",
+      "text": "Extremely disappointing tour. Very rough ride in a van too small for 12 passengers. Could barely move inside the van and the air conditioning did not work. It was hot and very dusty. The so called snacks were 1 bottle of warm water and a small bag of chips , a granola bar and a a small protein bar.\nOur guide was very nice but uncomfortable with the situation of overcrowding and lack of air conditioning. Also the trip was 3 hours longer than we were told.  I would not recommend this tour."
+    }
+  ],
   "allTime": {
     "googleMaps": {
-      "count": 55,
-      "avg": "4.71"
+      "count": 58,
+      "avg": "4.66"
     },
     "tripAdvisor": {
-      "count": 53,
-      "avg": "4.36"
+      "count": 51,
+      "avg": "4.35"
     },
     "combined": {
-      "count": 108,
-      "avg": "4.54"
+      "count": 109,
+      "avg": "4.51"
     },
-    "averageRating": "4.54",
-    "totalReviews": 108
+    "averageRating": "4.51",
+    "totalReviews": 109
   }
 }
