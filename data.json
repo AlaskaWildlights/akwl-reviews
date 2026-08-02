@@ -1,38 +1,38 @@
 {
-  "weekLabel": "Jul 19 – Jul 25, 2026",
-  "timestamp": "2026-07-26T12:59:20.665Z",
+  "weekLabel": "Jul 26 – Aug 1, 2026",
+  "timestamp": "2026-08-02T12:59:20.979Z",
   "summary": {
-    "totalReviews": 7,
-    "gmapsCount": 7,
-    "gmapsAvg": "4.4",
-    "taCount": 0,
-    "taAvg": "N/A",
-    "combinedAvg": "4.4",
+    "totalReviews": 10,
+    "gmapsCount": 5,
+    "gmapsAvg": "5.0",
+    "taCount": 5,
+    "taAvg": "4.4",
+    "combinedAvg": "4.7",
     "totalBonus": 0
   },
   "guides": [],
   "lowRatings": [
     {
       "guide": "UNASSIGNED",
-      "rating": 1,
-      "platform": "gmaps",
-      "text": "Extremely disappointing tour. Very rough ride in a van too small for 12 passengers. Could barely move inside the van and the air conditioning did not work. It was hot and very dusty. The so called snacks were 1 bottle of warm water and a small bag of chips , a granola bar and a a small protein bar.\nOur guide was very nice but uncomfortable with the situation of overcrowding and lack of air conditioning. Also the trip was 3 hours longer than we were told.  I would not recommend this tour."
+      "rating": 2,
+      "platform": "tripadvisor",
+      "text": "Based on our experience (4 adults) I would NOT book this tour done with Alaska Wild Lights.  This tour was the worst experience in our whole two weeks in Alaska.  I booked this tour in February for a June 2026 trip to the Arctic Circle Day Tour.  Before booking this tour, I called to confirm the information shown on their website stating a maximum of 8 people would be allowed on the tour as well as the type of vehicle would be a Sprinter (bus type vehicle allowing guests to fully stand up and also have ample leg room).  Two weeks before our tour, I called again to confirm max number of people and the vehicle type in which I received an email confirmation stating 8 people max traveling in a Sprinter.  The day we were picked up for the tour,  it was NOT a Sprinter but an old passenger van AND there would now be 11 people on the tour.  The passenger van was horribly uncomfortable with that many people crammed into the space and very difficult to get in and out of (could not stand up).  There was absolutely no leg room or room to move around while traveling.  Not only that, the air conditioning was not working and the passenger windows did not open at all, it was a very warm day.  They provided a snack which was ONE bottle of warm water, a very small snack bag of chips and some sort of granola bar.  This for a 15 hour road trip and there was no ability to buy water/snacks along the way.  We did stop at the Yukon River Camp, no snacks or water available there to purchase either but you could buy a hamburger to eat there.  We only stopped at port-a-potty locations when needed and at the Arctic Circle wood sign, no walks across the tundra as shown on their website, no stop at the Hilltop Restaurant & Marketplace just port-a-potties.  I reached out to the owner of the company several times before writing this review with NO RESPONSE."
     }
   ],
   "allTime": {
     "googleMaps": {
-      "count": 58,
-      "avg": "4.66"
+      "count": 56,
+      "avg": "4.71"
     },
     "tripAdvisor": {
-      "count": 51,
-      "avg": "4.35"
+      "count": 56,
+      "avg": "4.36"
     },
     "combined": {
-      "count": 109,
-      "avg": "4.51"
+      "count": 112,
+      "avg": "4.54"
     },
-    "averageRating": "4.51",
-    "totalReviews": 109
+    "averageRating": "4.54",
+    "totalReviews": 112
   }
 }
